@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Claude Code
+.claude/
+
+# Build
+dist/
+
+# Environment
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# TypeScript
+*.js.map
+*.d.ts
+!src/**/*.d.ts
