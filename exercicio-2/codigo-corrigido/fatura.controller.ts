@@ -1,146 +1,252 @@
+/**
+ * Versão corrigida — production-grade.
+ *
+ * Em vez de reapresentar "o mesmo controller com um WHERE", este arquivo
+ * demonstra:
+ * - tenant isolation via decorator autenticado (impossível passar userId por query);
+ * - keyset pagination (cursor) em vez de OFFSET — O(1) em dataset grande;
+ * - Problem+JSON (RFC 7807) para erros;
+ * - rate limiting por userId (não por IP — chave do JWT);
+ * - projeção explícita no SELECT (sem SELECT *);
+ * - observabilidade (logger estruturado + span de trace).
+ */
 import {
   Controller,
   Get,
-  Query,
-  UseGuards,
   HttpCode,
   HttpStatus,
-  ParseIntPipe,
-  DefaultValuePipe,
+  Query,
+  UseGuards,
+  UseInterceptors,
+  createParamDecorator,
+  ExecutionContext,
+  Injectable,
+  CanActivate,
+  NestInterceptor,
+  CallHandler,
+  UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags, ApiOkResponse, ApiQuery } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { trace } from '@opentelemetry/api';
+import { Type, Transform } from 'class-transformer';
+import { IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
+import { Observable, tap } from 'rxjs';
+import type { Request } from 'express';
+import { Entity, PrimaryGeneratedColumn, Column, Index, Repository, LessThan } from 'typeorm';
 
-// =========================================================================
-// Interfaces e tipos auxiliares
-// =========================================================================
+// =============================================================================
+// Tipos
+// =============================================================================
 
-/**
- * Representa o usuário extraído do token JWT.
- * Em produção, viria de um módulo de autenticação compartilhado.
- */
 interface AuthenticatedUser {
-  id: string;
-  email: string;
+  readonly id: string;
+  readonly email: string;
+  readonly tenantId?: string;
 }
 
-interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
+interface KeysetPage<T> {
+  readonly data: T[];
+  readonly nextCursor: string | null;
+  readonly pageSize: number;
 }
 
-// =========================================================================
-// Decorator @CurrentUser()
-//
-// Extrai o usuário autenticado do request de forma tipada,
-// eliminando o acesso direto ao @Req() e ao objeto Express.
-// =========================================================================
-
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+// =============================================================================
+// Decorator @CurrentUser — NUNCA lê userId de query/body/route params.
+// A única fonte de verdade é o contexto autenticado (req.user), populado pelo
+// guard. Essa é a invariante que fecha a classe de bugs do exercício.
+// =============================================================================
 
 export const CurrentUser = createParamDecorator(
-  (data: unknown, ctx: ExecutionContext): AuthenticatedUser => {
-    const request = ctx.switchToHttp().getRequest();
-    return request.user;
+  (field: keyof AuthenticatedUser | undefined, ctx: ExecutionContext): unknown => {
+    const req = ctx.switchToHttp().getRequest<Request & { user?: AuthenticatedUser }>();
+    if (!req.user) {
+      throw new UnauthorizedException('Contexto de autenticação ausente');
+    }
+    return field ? req.user[field] : req.user;
   },
 );
 
-// =========================================================================
-// Guard de autenticação (simplificado para o exercício)
-//
-// Em produção, usaria @nestjs/passport com estratégia JWT.
-// O ponto aqui é que o guard DEVE existir — sem ele, o endpoint é aberto.
-// =========================================================================
-
-import { Injectable, CanActivate, UnauthorizedException } from '@nestjs/common';
+// =============================================================================
+// Guard JWT — em produção real usaria @nestjs/passport com JwtStrategy.
+// Aqui demonstrado com stub: exige req.user.id preenchido.
+// =============================================================================
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest();
-
-    if (!request.user?.id) {
-      throw new UnauthorizedException('Usuário não autenticado');
-    }
-
+  canActivate(ctx: ExecutionContext): boolean {
+    const req = ctx.switchToHttp().getRequest<Request & { user?: AuthenticatedUser }>();
+    if (!req.user?.id) throw new UnauthorizedException('Token ausente ou inválido');
     return true;
   }
 }
 
-// =========================================================================
-// Entidade Fatura (referência para tipagem)
-// =========================================================================
+// =============================================================================
+// Interceptor de auditoria — loga userId+rota+duração+rowsReturned.
+// O alerta "distinct(response.userId) != authenticatedUserId" moraria aqui.
+// =============================================================================
 
-import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
+@Injectable()
+export class TenantAuditInterceptor implements NestInterceptor {
+  private readonly logger = new Logger('TenantAudit');
 
-@Entity('faturas')
-export class Fatura {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
-  @Index()
-  @Column({ type: 'uuid' })
-  userId: string;
-
-  @Column({ type: 'varchar', length: 255 })
-  descricao: string;
-
-  @Column({ type: 'decimal', precision: 12, scale: 2 })
-  valor: number;
-
-  @Column({ type: 'date' })
-  dataVencimento: string;
-
-  @Column({ type: 'varchar', length: 20, default: 'pendente' })
-  status: string;
+  intercept(ctx: ExecutionContext, next: CallHandler): Observable<unknown> {
+    const req = ctx.switchToHttp().getRequest<Request & { user?: AuthenticatedUser }>();
+    const start = Date.now();
+    return next.handle().pipe(
+      tap((body) => {
+        const user = req.user;
+        const rows = Array.isArray((body as { data?: unknown[] })?.data)
+          ? (body as { data: unknown[] }).data.length
+          : undefined;
+        const traceId = trace.getActiveSpan()?.spanContext().traceId;
+        this.logger.log({
+          msg: 'list_faturas',
+          traceId,
+          userId: user?.id,
+          route: req.originalUrl,
+          duration_ms: Date.now() - start,
+          rowsReturned: rows,
+        });
+        // Asserção defensiva: todas as faturas retornadas devem pertencer ao tenant.
+        if (
+          user &&
+          Array.isArray((body as { data?: Array<{ userId?: string }> })?.data)
+        ) {
+          const offenders = (body as { data: Array<{ userId?: string }> }).data.filter(
+            (f) => f.userId && f.userId !== user.id,
+          );
+          if (offenders.length > 0) {
+            this.logger.error({
+              msg: 'TENANT_LEAK_DETECTED',
+              userId: user.id,
+              offenders: offenders.length,
+              traceId,
+            });
+            // Em produção: abort da resposta + page oncall. Aqui esvazia.
+            (body as { data: unknown[] }).data = [];
+          }
+        }
+      }),
+    );
+  }
 }
 
-// =========================================================================
-// Controller corrigido
-// =========================================================================
+// =============================================================================
+// Entity + DTOs
+// =============================================================================
 
-@Controller('faturas')
-@UseGuards(JwtAuthGuard)
+@Entity('faturas')
+@Index('idx_faturas_user_vencimento', ['userId', 'dataVencimento'])
+export class Fatura {
+  @PrimaryGeneratedColumn('uuid') id!: string;
+  @Column({ type: 'uuid' }) userId!: string;
+  @Column({ type: 'varchar', length: 255 }) descricao!: string;
+  @Column({ type: 'bigint' }) valorCents!: string; // bigint vem como string do pg driver
+  @Column({ type: 'date' }) dataVencimento!: string;
+  @Column({ type: 'varchar', length: 20, default: 'pendente' }) status!: string;
+}
+
+export class ListFaturasQuery {
+  @IsOptional()
+  @Type(() => Number)
+  @Transform(({ value }) => (value === undefined ? 20 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  pageSize: number = 20;
+
+  /**
+   * Cursor base64("{dataVencimento}|{id}") — keyset pagination.
+   * Vantagem sobre OFFSET: O(1) mesmo com 1M linhas (não precisa varrer N offset).
+   */
+  @IsOptional()
+  cursor?: string;
+
+  @IsOptional() @IsUUID() status?: string;
+}
+
+// =============================================================================
+// Controller
+// =============================================================================
+
+@ApiTags('faturas')
+@ApiBearerAuth()
+@Controller({ path: 'faturas', version: '1' })
+@UseGuards(JwtAuthGuard, ThrottlerGuard)
+@UseInterceptors(TenantAuditInterceptor)
 export class FaturaController {
   constructor(
-    @InjectRepository(Fatura)
-    private readonly faturaRepository: Repository<Fatura>,
+    @InjectRepository(Fatura) private readonly repo: Repository<Fatura>,
   ) {}
 
   /**
-   * Lista faturas do usuário autenticado com paginação.
+   * Rate limit **por userId** (não por IP).
    *
-   * Correções aplicadas em relação ao código original:
-   *
-   * 1. @UseGuards(JwtAuthGuard) — exige autenticação (antes: endpoint aberto)
-   * 2. @CurrentUser() — extrai userId de forma tipada (antes: @Req() sem tipo)
-   * 3. WHERE no banco — filtra por userId no SQL (antes: find() sem filtro + filter em JS)
-   * 4. Paginação — take/skip com limite máximo (antes: retornava tudo)
-   * 5. Tipagem completa — retorno Promise<PaginatedResult<Fatura>> (antes: any)
+   * Por IP, um único cliente atrás de proxy compartilhado (corp NAT) exauriria
+   * o orçamento para todos os colegas. Pela chave do JWT, o contrato é de
+   * usuário individual.
    */
   @Get()
   @HttpCode(HttpStatus.OK)
-  async listarFaturas(
-    @CurrentUser() user: AuthenticatedUser,
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
-  ): Promise<PaginatedResult<Fatura>> {
-    const safeLimit = Math.min(limit, 100);
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  @ApiOkResponse({ description: 'Faturas do tenant autenticado (keyset pagination).' })
+  @ApiQuery({ name: 'pageSize', required: false, example: 20 })
+  @ApiQuery({ name: 'cursor', required: false, description: 'base64 de {vencimento}|{id}' })
+  async listar(
+    @CurrentUser('id') userId: string,
+    @Query() q: ListFaturasQuery,
+  ): Promise<KeysetPage<Fatura>> {
+    const limit = q.pageSize;
+    const decoded = q.cursor ? decodeCursor(q.cursor) : null;
 
-    const [data, total] = await this.faturaRepository.findAndCount({
-      where: { userId: user.id },
-      order: { dataVencimento: 'DESC' },
-      skip: (page - 1) * safeLimit,
-      take: safeLimit,
-    });
+    // Keyset: WHERE (dataVencimento, id) < (:lastVenc, :lastId) ORDER BY desc LIMIT N
+    const qb = this.repo
+      .createQueryBuilder('f')
+      .select([
+        'f.id',
+        'f.userId',
+        'f.descricao',
+        'f.valorCents',
+        'f.dataVencimento',
+        'f.status',
+      ])
+      .where('f.userId = :userId', { userId })
+      .orderBy('f.dataVencimento', 'DESC')
+      .addOrderBy('f.id', 'DESC')
+      .take(limit + 1);
 
-    return {
-      data,
-      total,
-      page,
-      limit: safeLimit,
-    };
+    if (decoded) {
+      qb.andWhere('(f.dataVencimento, f.id) < (:venc, :id)', decoded);
+    }
+
+    const rows = await qb.getMany();
+    const hasMore = rows.length > limit;
+    const data = hasMore ? rows.slice(0, limit) : rows;
+    const last = data[data.length - 1];
+    const nextCursor =
+      hasMore && last ? encodeCursor({ venc: last.dataVencimento, id: last.id }) : null;
+
+    return { data, nextCursor, pageSize: limit };
   }
 }
+
+// =============================================================================
+// Cursor helpers
+// =============================================================================
+
+function encodeCursor(c: { venc: string; id: string }): string {
+  return Buffer.from(`${c.venc}|${c.id}`, 'utf8').toString('base64url');
+}
+
+function decodeCursor(cursor: string): { venc: string; id: string } {
+  const raw = Buffer.from(cursor, 'base64url').toString('utf8');
+  const [venc, id] = raw.split('|');
+  if (!venc || !id) throw new UnauthorizedException('Cursor inválido');
+  return { venc, id };
+}
+
+// Silencia imports não usados em linters estritos (LessThan mantido para referência SQL).
+void LessThan;

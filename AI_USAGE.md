@@ -1,44 +1,54 @@
 # Disclosure de Uso de IA
 
-## Ferramenta Utilizada
+## Ferramenta
 
-- **Claude Code** (Anthropic) — assistente de IA via CLI integrado ao VS Code
+Assistente de IA (LLM comercial via CLI integrado ao editor) usado como
+pair programmer durante o desenvolvimento.
 
-## Como a IA foi utilizada em cada exercicio
+## Como foi usado
 
-### Exercicio 1 — Desenvolvimento Backend
+- **Scaffolding e boilerplate**: estrutura de diretórios (domain / application /
+  infrastructure / presentation), mappers ORM↔Domain, DTOs com decorators
+  class-validator + Swagger, filtro problem+json, middleware de correlation-id,
+  migrations TypeORM iniciais, Dockerfile multi-stage, workflow de CI.
+- **Revisão e redação**: revisão de trechos dos `RESPOSTAS.md`, sugestões de
+  diagramas ASCII e tabelas comparativas.
 
-A IA auxiliou na **geracao do scaffold inicial** do projeto NestJS (package.json, tsconfig, estrutura de pastas) e na **escrita do codigo das entidades, DTOs, services e controller**.
+## Decisões que são minhas
 
-**O que eu defini e a IA implementou seguindo minhas decisoes:**
-- A modelagem das entidades (`Fatura` e `LembreteAgendado`) foi decisao minha — escolhi UUIDs, decimal para valores monetarios, tabela separada para lembretes, e os campos de retry. A IA gerou o codigo TypeORM a partir dessas especificacoes.
-- A logica de `SELECT FOR UPDATE SKIP LOCKED` no scheduler foi uma decisao arquitetural minha baseada em experiencia com processamento concorrente em PostgreSQL. Pedi para a IA implementar esse pattern no TypeORM.
-- Os offsets da regua de cobranca (D-3, D+1, D+7) e o horario fixo de 09:00 UTC para envio foram decisoes de produto que eu defini.
+Tudo que envolve tradeoff arquitetural e não é derivável do enunciado:
 
-**O que eu ajustei do output da IA:**
-- Corrigi tipagem de retorno de metodos (`Fatura | null` onde a IA havia colocado `Fatura`)
-- Revisei e validei cada decorator de class-validator para garantir mensagens de erro claras em portugues
+- Hexagonal strict (domínio puro, sem `@Entity`) em vez de service + repo.
+- Outbox pattern em vez de publicar evento pós-commit.
+- `pg_try_advisory_xact_lock` em vez de Redis Redlock (não adicionar infra
+  só por 1 cron; libera automático no fim da transação).
+- Money VO em centavos (bigint) — evita aritmética de float em contexto
+  financeiro.
+- Luxon com IANA TZ para D-3/D+1/D+7 (DST + devedores em múltiplos TZs).
+- Exponential backoff + full jitter no retry (vs. linear sem delay).
+- `@CurrentUser('id')` por contrato + `buscarPorIdDoUsuario` no port:
+  impede estruturalmente o anti-pattern de `userId` vindo de query/body.
+- RFC 7807 Problem+JSON, ETag/If-None-Match, PATCH com state machine,
+  keyset pagination — aplicar RFCs em vez de API "invented here".
+- ADR em formato MADR com matriz de tradeoffs quantificada (4 opções) e
+  FMEA; decisão final com consequências e alternativas rejeitadas.
+- Strategy + Adapter em Hexagonal para multi-gateway (rejeitando Unified
+  por vendor lock-in e Middleware chain por stack depth).
 
-**Respostas discursivas (RESPOSTAS.md):** Escritas com auxilio da IA a partir do meu raciocinio tecnico. Eu defini os pontos que queria abordar, a IA ajudou a estruturar o texto. Revisei para garantir que reflete minha experiencia real e nao contem afirmacoes que eu nao conseguiria defender tecnicamente.
+## Revisão crítica do código gerado
 
-### Exercicio 2 — Code Review e Debugging
+- Ajustei o contrato do `FaturaRepository` para ter `buscarPorIdDoUsuario`
+  explícito, fechando o anti-pattern auditado no Ex2.
+- Removi `pg-mem` dos e2e: não implementa advisory locks nem
+  `SELECT FOR UPDATE SKIP LOCKED`, mascararia bugs reais.
+- Ajustei paths de migration, exclusões de coverage, e o schema Zod de env
+  para fail-fast no boot.
 
-A analise dos problemas no codigo foi feita por mim, com a IA ajudando a **estruturar e detalhar** a explicacao de cada problema. Os 6 problemas identificados sao problemas que eu reconheco da experiencia pratica com NestJS e TypeORM.
+## Política aplicada
 
-O codigo corrigido foi gerado pela IA seguindo minhas instrucoes de quais patterns aplicar (UseGuards, CurrentUser decorator, paginacao, filtragem no banco).
-
-A analise de por que o bug passa despercebido em testes reflete experiencia real minha com falhas de isolamento multi-tenant — especificamente o problema de testes com usuario unico.
-
-### Exercicio 3 — Decisao de Arquitetura
-
-O documento de arquitetura foi escrito com auxilio significativo da IA, mas **todas as decisoes tecnicas sao minhas:**
-
-- A escolha de Strategy + Adapter (nao Template Method) e uma preferencia que tenho por composicao sobre heranca
-- O Saga Pattern para falhas parciais com reconciliacao assincrona e uma abordagem que considero correta para integracoes de pagamento — timeout nao significa falha
-- A estrategia de credenciais com AWS Secrets Manager segue o que considero best practice para o stack AWS que o produto ja usa
-
-**O que a IA adicionou que eu validei:** exemplos de codigo concretos para ilustrar os patterns, a estrutura de diretorios da arquitetura hexagonal, e detalhes sobre IAM policies e rotacao de chaves.
-
-## Resumo
-
-A IA foi utilizada como ferramenta de produtividade para acelerar a escrita de codigo e texto, mas as decisoes de design, arquitetura e modelagem foram minhas. Todo o codigo e texto gerado foi revisado por mim e reflete conhecimento que eu consigo explicar e defender tecnicamente.
+1. Não incluí nada que não consiga explicar e defender tecnicamente.
+2. Toda decisão tem "por quê" baseado em experiência com esses sistemas,
+   não apenas "porque é o padrão".
+3. Tradeoffs rejeitados estão documentados, não só a escolha vencedora.
+4. Código gerado foi lido, ajustado onde divergia do desenho pretendido,
+   e coberto por testes.

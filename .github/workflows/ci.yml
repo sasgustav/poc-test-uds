@@ -1,0 +1,45 @@
+name: ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  exercicio-1:
+    name: exercicio-1 — lint · typecheck · test · build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: exercicio-1
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: cobranca_user
+          POSTGRES_PASSWORD: cobranca_pass
+          POSTGRES_DB: cobranca_db
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U cobranca_user"
+          --health-interval=10s --health-timeout=5s --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: exercicio-1/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test -- --coverage
+        env:
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USERNAME: cobranca_user
+          DB_PASSWORD: cobranca_pass
+          DB_DATABASE: cobranca_db
+      - run: npm run build

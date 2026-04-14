@@ -1,271 +1,400 @@
-# Exercício 3 — Decisão de Arquitetura: Integração com Gateways de Pagamento
+# ADR 001 — Integração Multi-Gateway de Pagamentos
 
-## Contexto
-
-O produto precisa integrar com três gateways de pagamento completamente diferentes: Stripe (REST moderno), Asaas (REST brasileiro) e um gateway bancário legado (SOAP/XML). Novos gateways poderão ser adicionados no futuro. A solução precisa ser extensível sem que cada novo gateway contamine o código existente.
+- **Status**: Proposed
+- **Data**: 2026-04-14
+- **Autor**: Gustavo Vasconcelos
+- **Tags**: payments, integrations, hexagonal, pci
 
 ---
 
-## 1. Qual padrão de design eu usaria e por quê?
+## 1. Contexto
 
-### Padrão principal: Strategy + Adapter
+O produto precisa integrar três gateways com superfícies completamente
+diferentes, com expectativa de adicionar mais:
 
-Usaria a combinação de dois padrões complementares:
+| Gateway | Protocolo | Auth | Idempotência nativa | Webhook signature | Reconciliação |
+|---------|-----------|------|---------------------|-------------------|---------------|
+| **Stripe** | REST/JSON, HTTP/2 | `Authorization: Bearer sk_live_...` | `Idempotency-Key` header | HMAC-SHA256 + timestamp tol. ±5min | Events API (paginated) |
+| **Asaas** | REST/JSON | `access_token` header | ❌ — implementar via `externalReference` + tabela local | HMAC-SHA1 no body | Webhook + polling |
+| **Banco Legado (mock)** | SOAP/XML sobre HTTPS + mTLS | Cert cliente x.509 | ❌ — sequencial-ID gerado localmente | mTLS (sem body signature) | Arquivo CNAB 240 (batch diário) |
 
-**Strategy Pattern** define uma interface comum (`PaymentGateway`) que abstrai as operações de pagamento. Cada gateway implementa essa interface com sua lógica específica. O código de domínio depende apenas da interface, nunca da implementação concreta.
+O desafio é ter uma API interna **única** para "cobrar fatura", "capturar
+webhook", "reconciliar" sem que a heterogeneidade vaze para quem usa.
 
-**Adapter Pattern** é necessário especificamente para o gateway SOAP legado. Enquanto Stripe e Asaas têm APIs REST que mapeiam naturalmente para a interface `PaymentGateway`, o gateway SOAP tem um contrato completamente diferente (XML, WSDL, operações com nomes distintos). O Adapter traduz chamadas da interface `PaymentGateway` para chamadas SOAP sem expor essa complexidade ao resto do sistema.
+### Decision Drivers
 
-**Factory Pattern** complementa os dois anteriores: uma `PaymentGatewayFactory` recebe um identificador (ex: `'stripe'`, `'asaas'`, `'banco_legado'`) e retorna a implementação correta. No NestJS, isso se implementa naturalmente com injeção de dependência dinâmica.
+1. **Extensibilidade** — novo gateway entra em 1 classe, não rewriting.
+2. **Testabilidade** — regra de negócio não pode depender de HTTP real.
+3. **PCI scope mínimo** — app nunca toca PAN/CVV; só tokens.
+4. **Failure isolation** — gateway caindo não derruba fluxo de outros.
+5. **Time-to-market** — solução implementável em 2 sprints.
+6. **Vendor risk** — poder trocar Stripe↔Adyen sem rewriting.
 
-### Por que não apenas Factory?
+---
 
-Factory resolve "qual instanciar", mas não resolve "como garantir que todos tenham a mesma interface". Strategy garante polimorfismo — qualquer gateway, existente ou futuro, implementa o mesmo contrato. Sem Strategy, cada novo gateway teria métodos com nomes e assinaturas diferentes, e o código chamador precisaria de if/else para cada um.
+## 2. Opções consideradas
 
-### Por que não apenas herança (Template Method)?
+### Opção 1 — Strategy + Adapter + Factory em Hexagonal (**escolhida**)
 
-Herança criaria acoplamento entre gateways que não compartilham lógica. Stripe e o gateway SOAP não têm nada em comum na implementação — forçar uma classe base seria artificial. Composição via interface é mais flexível e respeita o princípio "favor composition over inheritance".
+Port `PaymentGateway` no domínio; adapters por gateway; Factory decide qual
+adapter usar por fatura (critério: país/valor/prioridade/feature-flag).
 
-### Estrutura concreta no NestJS:
+### Opção 2 — Template Method
+
+Classe abstrata `BasePaymentGateway` com `charge()` template, hooks
+`authenticate()`, `buildRequest()`, `parseResponse()`.
+
+### Opção 3 — Middleware chain
+
+Cada gateway é um handler numa chain; o "manager" decide quem aceita.
+
+### Opção 4 — Unified gateway (ex.: Stripe Connect, Pagar.me Hub)
+
+Um único provider que abstrai os outros. Zero código de adapter nosso.
+
+---
+
+## 3. Matriz de tradeoffs
+
+| Critério | Strategy+Adapter | Template Method | Middleware | Unified |
+|----------|:---:|:---:|:---:|:---:|
+| Acoplamento domain ↔ provedor | **Zero** (port) | Médio (herança) | Zero | Alto (lock-in) |
+| Custo de adicionar gateway | 1 classe + factory entry | 1 subclasse + mudança na base se shape novo | 1 middleware + config | 0 (provedor faz) |
+| Testabilidade (mock do port) | **Alta** | Média (mock da base) | Média | Baixa (HTTP real ou mock complexo) |
+| Stack depth / debug | +2 frames | +1 | +N (chain size) | +opaco |
+| Falha isolada | **Sim** | Sim | Parcial | **Não** (todos dependem dele) |
+| Suporta SOAP + REST + mTLS | **Sim** (cada adapter livre) | Forçado (shape comum na base) | Sim | Limitado ao que o provider aceita |
+| PCI scope | Mínimo (tokens) | Mínimo | Mínimo | Mínimo mas terceirizado |
+| Vendor lock-in custo de sair | **Baixo** (reescrever 1 adapter) | Baixo | Baixo | **Alto** (reescrever integração inteira) |
+| Time-to-market | 2 sprints | 1.5 sprints | 2 sprints | 1 sprint |
+
+**Decisão:** Opção 1. Template Method perde quando o shape dos providers é
+heterogêneo (SOAP + JSON no mesmo hierarquia vira enforcement torto).
+Middleware perde em debug (stack fundo) e em "qual middleware aceitou" não é
+natural. Unified troca 3 lock-ins por 1 maior.
+
+---
+
+## 4. Desenho escolhido
+
+### 4.1 Port no domínio
 
 ```typescript
-// A interface que define o contrato — o "Port" na arquitetura hexagonal
+// src/pagamento/domain/ports/payment-gateway.port.ts
 export interface PaymentGateway {
-  createCharge(input: CreateChargeInput): Promise<ChargeResult>;
-  getChargeStatus(chargeId: string): Promise<ChargeStatus>;
-  refund(chargeId: string, amount?: number): Promise<RefundResult>;
+  readonly name: 'stripe' | 'asaas' | 'banco-legado';
+  charge(cmd: ChargeCommand): Promise<ChargeResult>;
+  refund(paymentId: string, amount: Money): Promise<RefundResult>;
+  verifyWebhook(headers: Record<string, string>, rawBody: Buffer): WebhookEvent;
 }
+```
 
-// Objetos de domínio — o gateway traduz de/para estes
-export interface CreateChargeInput {
-  amount: number;          // Em centavos, para evitar decimais
-  currency: string;        // 'BRL'
-  customerId: string;
-  description: string;
-  idempotencyKey: string;  // Crucial para segurança em retries
-}
+### 4.2 Diagrama de componentes (hexágono)
 
-export interface ChargeResult {
-  gatewayChargeId: string;
-  status: 'pending' | 'confirmed' | 'failed';
-  rawResponse?: unknown;   // Resposta original do gateway, para debug
-}
+```
+                      ┌─────────────────────────────┐
+                      │     Domain (puro)           │
+                      │  Pagamento · Money          │
+                      │  PaymentGateway (port)      │
+                      │  WebhookVerifier (port)     │
+                      └─────┬───────────────────┬───┘
+                            │                   │
+            ┌───────────────▼─────┐    ┌────────▼──────────┐
+            │ Application         │    │                   │
+            │ IniciarPagamentoUC  │    │  WebhookHandlerUC │
+            │ ReconciliarUC       │    │                   │
+            │ GatewayRouter       │    │                   │
+            └──┬────────────┬─────┘    └────┬──────────────┘
+               │            │               │
+               ▼            ▼               ▼
+   ┌───────────────────────────────────────────────────┐
+   │              Infrastructure adapters              │
+   │  StripeGateway    AsaasGateway   BancoLegadoGW    │
+   │  (REST + HMAC)    (REST + HMAC)  (SOAP + mTLS)    │
+   │                                                    │
+   │  SecretsManagerClient   WebhookEventDedupeRepo     │
+   │  ReconciliationScheduler                           │
+   └───────────────────────────────────────────────────┘
+```
+
+### 4.3 Sequência — happy path
+
+```
+Client → App: POST /v1/pagamentos { faturaId, method: 'pix' }
+App → GatewayRouter: qual gateway pra (BR, pix, R$500)?
+Router → App: 'asaas'
+App → AsaasGateway.charge(cmd)
+AsaasGateway → Asaas HTTP: POST /payments Idempotency via externalReference
+Asaas HTTP → AsaasGateway: 200 { id: 'pay_123', status: 'PENDING' }
+AsaasGateway → App: ChargeResult(PENDING, externalRef)
+App persiste Pagamento(PROCESSING) + outbox_event.PagamentoIniciado
+App → Client: 202 Accepted { id, status: 'processing' }
+
+[ minutos depois ]
+Asaas Webhook → App: POST /webhooks/asaas (evento PAID)
+App → AsaasGateway.verifyWebhook(headers, rawBody) → sig OK + eventId
+App → WebhookEventRepo.tryRegister(eventId)  ← idempotência de webhook
+App → Pagamento.confirmar(), outbox_event.PagamentoConfirmado
+App → Client event bus: "pagamento.confirmado"
+```
+
+### 4.4 Sequência — falhas
+
+```
+[1] Timeout ao charge: retry com jitter + status = REQUIRES_RECONCILIATION
+[2] Webhook com sig inválida: 401, log estruturado, sem persistência
+[3] Webhook duplicado (eventId já visto): 200 OK, no-op (idempotente)
+[4] 5xx recorrente: circuit breaker abre → GatewayRouter roteia para fallback
+[5] Gateway confirma mas app não recebeu webhook: cron de reconciliação
+    consulta status por externalRef (polling fallback)
+```
+
+### 4.5 State machine do pagamento
+
+```
+                   ┌────────┐ charge()          ┌─────────────┐
+                   │INITIATED├──────────────────►│ PROCESSING  │
+                   └────────┘                   └──────┬──────┘
+                                                       │
+                  ┌─── timeout/err ── webhook.paid ────┤
+                  ▼                     ▼              │
+       ┌──────────────────────┐   ┌──────────┐         │
+       │REQUIRES_RECONCILIATION│  │CONFIRMED │         │
+       └─────┬────────────────┘   └──────────┘         │
+             │ cron reconc                             │
+             ├─► CONFIRMED (ok)                        │
+             └─► MANUAL_REVIEW (divergência)           │
+                                                       ▼
+                                                 ┌──────────┐
+                                                 │  FAILED  │
+                                                 └──────────┘
+```
+
+### 4.6 Deployment
+
+```
+      ┌───────────────┐
+ ┌────┤ Secrets Mgr   │ (rotation)
+ │    └───────────────┘
+ │    ┌───────────────┐
+ │    │  KMS (envelope│───► caches credenciais em mem TTL
+ │    │   encryption) │
+ │    └───────────────┘
+ │
+ ▼
+App (AZ-A) ──────────────────────────► Stripe (globo)
+App (AZ-B) ──────────────────────────► Asaas (BR)
+      │
+      └──── mTLS ────────────────────► Banco Legado SOAP (BR, on-prem)
+      │
+      └──── OTel ────► Collector ────► Jaeger + Prometheus + Loki
 ```
 
 ---
 
-## 2. Como isolaria a lógica específica de cada gateway sem contaminar o domínio?
+## 5. FMEA (Failure Mode & Effects Analysis)
 
-### Arquitetura Hexagonal (Ports and Adapters)
-
-A estrutura de diretórios reflete a separação entre domínio e infraestrutura:
-
-```
-src/
-├── pagamento/
-│   ├── pagamento.module.ts
-│   ├── domain/
-│   │   ├── ports/
-│   │   │   └── payment-gateway.port.ts      # Interface PaymentGateway
-│   │   ├── models/
-│   │   │   ├── charge.model.ts              # CreateChargeInput, ChargeResult, etc.
-│   │   │   └── payment-transaction.entity.ts # Registro local de transações
-│   │   └── services/
-│   │       └── payment.service.ts           # Orquestra o fluxo, usa o port
-│   │
-│   └── infrastructure/
-│       ├── gateways/
-│       │   ├── stripe.adapter.ts            # Implementa PaymentGateway via Stripe SDK
-│       │   ├── asaas.adapter.ts             # Implementa PaymentGateway via API Asaas
-│       │   └── banco-legado.adapter.ts      # Implementa PaymentGateway via SOAP
-│       └── gateway.factory.ts               # Resolve qual adapter usar
-```
-
-### Princípios de isolamento:
-
-**O domínio nunca importa infraestrutura.** `payment.service.ts` importa apenas `payment-gateway.port.ts` (a interface). Ele não sabe se está falando com Stripe ou SOAP. Isso é injeção de dependência na prática:
-
-```typescript
-@Injectable()
-export class PaymentService {
-  constructor(private readonly gatewayFactory: PaymentGatewayFactory) {}
-
-  async processarPagamento(faturaId: string, gatewayId: string): Promise<PaymentTransaction> {
-    const gateway = this.gatewayFactory.getGateway(gatewayId);
-    // gateway é do tipo PaymentGateway — o service não sabe qual implementação é
-    const result = await gateway.createCharge({ ... });
-    // Salva o resultado local
-  }
-}
-```
-
-**Cada adapter encapsula TODA a complexidade do seu gateway.** O `stripe.adapter.ts` importa o Stripe SDK, faz a tradução de `CreateChargeInput` para `stripe.charges.create(...)`, e converte a resposta para `ChargeResult`. O `banco-legado.adapter.ts` monta XML, faz a chamada SOAP, parseia a resposta XML, e retorna o mesmo `ChargeResult`. O domínio não sabe e não se importa.
-
-**Testabilidade.** Para testar o `PaymentService`, basta criar um mock de `PaymentGateway`. Não precisa de SDK do Stripe, nem de servidor SOAP. Cada adapter pode ser testado isoladamente com mocks do seu SDK/client específico.
-
-### Registro dinâmico no NestJS:
-
-```typescript
-@Module({
-  providers: [
-    PaymentService,
-    PaymentGatewayFactory,
-    { provide: 'STRIPE_GATEWAY', useClass: StripeAdapter },
-    { provide: 'ASAAS_GATEWAY', useClass: AsaasAdapter },
-    { provide: 'BANCO_LEGADO_GATEWAY', useClass: BancoLegadoAdapter },
-  ],
-})
-export class PagamentoModule {}
-```
-
-A `PaymentGatewayFactory` recebe todos os adapters via `@Inject()` e resolve pelo identificador. Adicionar um novo gateway significa criar um novo adapter + registrar no module. Zero alteração no domínio.
+| # | Modo de falha | Detecção | Mitigação | Blast radius |
+|---|---------------|----------|-----------|--------------|
+| 1 | Stripe 5xx | `payment_errors_total{gw="stripe",class="5xx"}` | Retry com jitter (3×) → circuit breaker abre → GatewayRouter fallback Asaas | Transações de cartão internacional caem durante a janela |
+| 2 | Asaas timeout (>10s) | `payment_latency_ms{gw="asaas"}` p99 | Timeout explícito 8s + retry 2× + marca `REQUIRES_RECONCILIATION` | Transações BR; reconciliação cron limpa |
+| 3 | SOAP cert expirado | Alerta `cert_days_until_expiry < 30` | Rotação automática via ACM + notify antecipado | Banco legado cai silenciosamente se não monitorado |
+| 4 | Webhook com sig inválida (tentativa maliciosa) | `webhook_rejected_total{gw,reason}` | Rejeita 401, log + rate limit por IP | Zero — sig verifica antes de persistir |
+| 5 | Webhook duplicado | `webhook_duplicate_total{gw}` | Tabela `webhook_events(eventId UNIQUE)`, INSERT → se conflito, no-op | Zero — idempotência garantida |
+| 6 | Replay attack (webhook antigo reemitido) | `webhook_timestamp_skew_seconds` | Rejeita se `|now - ts| > 5min` (tolerância do provider) | Zero |
+| 7 | Double-charge por retry sem idempotency | (bug de implementação) | Asaas: `externalReference` único por fatura; SOAP: sequential-ID gerado com lock + tabela. Stripe: nativo | Financeiro — clientes cobrados 2× |
+| 8 | Confirmado no gateway, perdido em trânsito | Cron reconciliação + gap > 1h → `MANUAL_REVIEW` | Query Events API diariamente, cross-check com pagamentos locais | Operacional — intervenção manual |
+| 9 | Leak de segredo no log | Grep CI + redact paths em pino | Secrets nunca em log; HTTP client com interceptor redact | Crítico — rotação + postmortem |
+| 10 | Gateway cobra moeda errada (BRL vs USD) | Validação DTO + asserção `response.currency == expected` | Falha no charge com erro domain | Zero se detectado antes de commit |
 
 ---
 
-## 3. Como trataria falhas parciais (ex: gateway retorna timeout após débito confirmado)?
+## 6. Observabilidade por gateway
 
-Esse é o cenário mais perigoso em integração de pagamentos. Um timeout **não significa que a operação falhou** — pode significar que o débito aconteceu mas a resposta não chegou. Tratar timeout como falha e não cobrar pode causar prejuízo. Tratar como sucesso e cobrar de novo causa cobrança duplicada e chargeback.
+### Métricas (Prometheus)
 
-### Solução: Saga Pattern com reconciliação assíncrona
-
-O fluxo segue 4 etapas:
-
-**Etapa 1 — Registro local ANTES da chamada ao gateway:**
-
-```typescript
-// Antes de chamar o gateway, persiste a intenção no banco local
-const transaction = await this.transactionRepo.save({
-  faturaId,
-  gatewayId,
-  amount,
-  idempotencyKey: uuidv4(),
-  status: 'processing',  // Estado intermediário
-  createdAt: new Date(),
-});
+```
+payment_latency_ms{gateway,method,result}         histogram
+payment_success_rate{gateway}                     derived
+webhook_verify_duration_ms{gateway,result}        histogram
+webhook_duplicate_total{gateway}                  counter
+webhook_rejected_total{gateway,reason}            counter  # sig invalid | skew | parse
+reconciliation_lag_seconds                         gauge
+manual_review_queue_depth                          gauge
+gateway_circuit_breaker_state{gateway}             gauge   # 0=closed,1=open,2=half
 ```
 
-Isso garante que temos registro da tentativa mesmo se o processo morrer durante a chamada.
+### Distributed tracing
 
-**Etapa 2 — Chamada ao gateway com idempotency key:**
+Cada charge cria um span `payment.charge` com atributos:
 
-```typescript
-try {
-  const result = await gateway.createCharge({
-    ...input,
-    idempotencyKey: transaction.idempotencyKey,
-  });
+```
+payment.id, payment.gateway, payment.method, payment.amount_cents,
+gateway.request_id (vendor), gateway.http_status,
+pagamento.idempotency_key
+```
 
-  await this.transactionRepo.update(transaction.id, {
-    status: result.status === 'confirmed' ? 'confirmed' : 'failed',
-    gatewayChargeId: result.gatewayChargeId,
-    gatewayResponse: result.rawResponse,
-  });
-} catch (error) {
-  if (isTimeoutError(error)) {
-    await this.transactionRepo.update(transaction.id, {
-      status: 'requires_reconciliation',
-      errorMessage: error.message,
-    });
-  } else {
-    await this.transactionRepo.update(transaction.id, {
-      status: 'failed',
-      errorMessage: error.message,
-    });
-  }
+`traceId` é propagado até Stripe quando possível (header `traceparent`) — útil
+pra rastrear "nosso request X corresponde a qual cobrança deles".
+
+### Log schema
+
+```json
+{
+  "msg": "payment.charge",
+  "traceId": "...",
+  "faturaId": "...",
+  "gateway": "stripe",
+  "idempotencyKey": "...",
+  "status": "CONFIRMED",
+  "duration_ms": 187,
+  "gateway_request_id": "req_abc"
 }
 ```
 
-A **idempotency key** é fundamental: se enviarmos a mesma key duas vezes ao Stripe, ele retorna o resultado da primeira chamada sem processar novamente. Todos os gateways sérios suportam esse conceito (no SOAP legado, implementaríamos via um campo de referência única).
-
-**Etapa 3 — Worker de reconciliação:**
-
-Um job agendado (similar ao do exercício 1) busca transações com status `requires_reconciliation` e consulta o gateway:
-
-```typescript
-@Cron('*/5 * * * *') // A cada 5 minutos
-async reconciliar(): Promise<void> {
-  const pendentes = await this.transactionRepo.find({
-    where: { status: 'requires_reconciliation' },
-  });
-
-  for (const tx of pendentes) {
-    const gateway = this.gatewayFactory.getGateway(tx.gatewayId);
-    const status = await gateway.getChargeStatus(tx.gatewayChargeId || tx.idempotencyKey);
-
-    if (status.confirmed) {
-      await this.transactionRepo.update(tx.id, { status: 'confirmed' });
-    } else if (status.notFound) {
-      // Gateway não tem registro — o débito realmente não aconteceu
-      await this.transactionRepo.update(tx.id, { status: 'failed' });
-    }
-    // Se ainda ambíguo, deixa para o próximo ciclo
-  }
-}
-```
-
-**Etapa 4 — O banco local é source of truth:**
-
-A aplicação nunca consulta o gateway para saber se "o pagamento foi feito". Ela consulta a tabela `payment_transactions` local. O worker de reconciliação é o único que sincroniza o estado entre gateway e banco local. Isso desacopla o fluxo principal de negócio da disponibilidade do gateway.
-
-### E se a reconciliação falhar persistentemente?
-
-Após N tentativas de reconciliação sem resolução, a transação é escalada para um estado `requires_manual_review` e gera um alerta (Slack, e-mail para o time financeiro). Em pagamentos, existe um ponto onde automação precisa dar lugar a intervenção humana — é melhor escalar do que tomar a decisão errada automaticamente.
+Credenciais/PAN/CVV nunca logados — `pino.redact` com paths explícitos +
+ESLint rule custom para barrar `console.log` no módulo de pagamento.
 
 ---
 
-## 4. Onde e como armazenaria as credenciais de cada gateway?
+## 7. Segurança
 
-### Ambientes e estratégias:
+### 7.1 Webhook verification por gateway
 
-**Desenvolvimento local:**
-- Arquivo `.env` (gitignored) com chaves de teste/sandbox dos gateways
-- Carregado via `@nestjs/config` (`ConfigService`)
-- O `.env.example` no repositório lista as variáveis necessárias sem valores reais
+| Gateway | Mecanismo | Tolerância skew |
+|---------|-----------|-----------------|
+| Stripe | `Stripe-Signature` HMAC-SHA256(timestamp + "." + payload) | ±5min |
+| Asaas | `asaas-signature` HMAC-SHA1(payload) | configurável |
+| Banco Legado | mTLS + IP allowlist | N/A (SOAP push) |
 
-```env
-STRIPE_SECRET_KEY=sk_test_...
-ASAAS_API_KEY=...
-BANCO_LEGADO_CERT_PATH=./certs/sandbox.pem
-BANCO_LEGADO_WSDL_URL=https://sandbox.banco.com.br/service?wsdl
+Para todos: **eventId único** em `webhook_events(id PK, gateway, received_at)`.
+`INSERT ... ON CONFLICT DO NOTHING` dá idempotência em 1 roundtrip.
+
+### 7.2 Replay attack prevention
+
+Timestamp obrigatório dentro da tolerância. Nonce (eventId) na UNIQUE key
+impede mesmo evento processado 2×. Janela tolerância curta (5min) reduz
+espaço para atacante fazer replay longe do tempo original.
+
+### 7.3 PCI scope
+
+App **nunca** toca PAN/CVV:
+
+- Frontend usa `Stripe Elements` (ou equivalente Asaas) — tokeniza direto no
+  browser → backend recebe `pm_...` token.
+- SOAP legado: mesma ideia — cliente envia token de sessão da página do
+  banco, app apenas invoca "cobrar com este token".
+- Data classification: `Pagamento.token` é PCI-scope (criptografado at-rest,
+  TLS 1.3 em trânsito); `Pagamento.id`, `amount`, `status` são metadata PII.
+
+### 7.4 Secrets rotation
+
+- **Stripe keys**: rotação trimestral via Lambda rotation function do AWS
+  Secrets Manager. Keys versioned — 7d overlap window pro webhook continuar
+  verificando durante rotação (dois HMAC aceitos).
+- **Certificado SOAP**: ACM Private CA, renovação automática T-30d; alerta
+  T-45d; cobre o caso de falha de automação.
+- **KMS envelope**: credencial em cache tem data key encrypted com CMK. App
+  processo descriptografa na boot + refresh a cada 1h.
+
+---
+
+## 8. SLO / SLI / Capacity
+
+| SLI | SLO | Janela | Justificativa |
+|-----|-----|--------|---------------|
+| `(settled_within_60s + failed_with_clear_error) / total` | 99.5% | 30d | Cobre: confirmação fast-path OU falha explícita. "Pendente indefinido" é violação. |
+| Webhook verificado e processado | 99.95% / 7d | 7d | Perder webhook = fatura não confirma; reconc cron só limpa depois. |
+| p95 latência `payment.charge` | < 2s Stripe / 3s Asaas / 8s SOAP | 7d | Limites vindos de observação empírica + SLA do vendor. |
+| Reconciliação lag | p99 < 1h | 30d | Cron horário; acima disso viola UX. |
+
+### Load expected
+
+- Pico dezembro: 500 tx/min (média); 2000 tx/min (pico 10min durante Black Friday).
+- Sustain: 60 tx/min.
+- Budget error: 0.5% × 30d × 86400 × tx/s ≈ margem para 12h de indisponibilidade
+  por mês.
+
+### Chaos testing
+
+- Inject latency 10s em Stripe via toxiproxy → assertar fallback kicks in em
+  ≤ 1s.
+- Kill Asaas mid-transaction → assertar pagamento vai pra
+  `REQUIRES_RECONCILIATION`, cron confirma ou marca `MANUAL_REVIEW`.
+- Simular 5 × 500 errors consecutivos do SOAP → circuit breaker abre; novas
+  requests falham fast com "gateway unavailable" em vez de esperar timeout.
+
+---
+
+## 9. Multi-região e vendor lock-in
+
+### Multi-região
+
+- Secrets Manager replication cross-region (us-east-1 ↔ sa-east-1) — failover
+  de região não invalida credenciais cache.
+- Endpoints de gateways são globais (Stripe) ou BR-only (Asaas, Banco) — em
+  DR region, BR gateways continuam funcionando; Stripe via endpoint global.
+
+### Failover policy do `GatewayRouter`
+
+```
+Métricas colhidas: success_rate{gw} por 5min.
+Ordem de preferência por fatura BR:
+  1. Asaas (fee 2.49%, sucesso 99.5%)
+  2. Stripe (fee 2.9% + 0.39, sucesso 99.99% — fallback de custo alto)
+  3. Banco Legado (fee BRL 2.50 fixo — usado só para B2B >R$10k, offline OK)
+
+Se Asaas success_rate{5m} < 98% → routing skip Asaas até recuperar.
 ```
 
-**Produção:**
-- **AWS Secrets Manager** (já estamos na AWS com EC2+RDS): armazena as credenciais de forma encriptada com rotação automática
-- A aplicação busca as credenciais na inicialização via SDK da AWS e cacheia em memória (com TTL para respeitar rotação)
-- As credenciais NUNCA passam por variáveis de ambiente do EC2 em produção — isso exporia elas em metadata e process dumps
+### Custo de vendor lock-in quantificado
 
-```typescript
-@Injectable()
-export class SecretsService {
-  private cache = new Map<string, { value: string; expiresAt: number }>();
+- Trocar Stripe → Adyen: reescrever `StripeGateway` (~80h dev + 40h QA +
+  certificação PCI). Vale se fee economy > **R$ 8.000/mês** (ROI 12 meses
+  considerando 80h × R$ 150 + overhead).
+- Trocar Banco Legado SOAP → novo banco SOAP: ~120h (SOAP é mais verboso +
+  tests de mTLS). Vale se fee diferencial > **R$ 12.000/mês**.
 
-  async getSecret(secretName: string): Promise<string> {
-    const cached = this.cache.get(secretName);
-    if (cached && cached.expiresAt > Date.now()) return cached.value;
+Essa quantificação é a virtude do padrão: o cálculo "quanto custa sair" é
+concreto, não handwaving.
 
-    const client = new SecretsManagerClient({ region: 'us-east-1' });
-    const response = await client.send(
-      new GetSecretValueCommand({ SecretId: secretName })
-    );
+---
 
-    this.cache.set(secretName, {
-      value: response.SecretString!,
-      expiresAt: Date.now() + 5 * 60 * 1000, // Cache por 5 minutos
-    });
+## 10. Consequências
 
-    return response.SecretString!;
-  }
-}
-```
+### Positivas
 
-**Multi-tenant (futuro — cada cliente com seus gateways):**
-- A tabela `tenant_gateway_config` armazena o identificador do secret no Secrets Manager (ex: `prod/tenant-123/stripe`), nunca a chave em si
-- O adapter resolve a credencial em runtime: `const key = await this.secrets.getSecret(tenant.stripeSecretArn)`
-- Isso permite que cada tenant use chaves diferentes sem alterar código
+- Novo gateway = 1 classe + 1 entry no `GatewayRouter`. Sem tocar use-cases.
+- Testes de regra (`IniciarPagamentoUseCase`) rodam com `FakeGateway` em ms.
+- Circuit breaker + fallback = 0 downtime de produto quando 1 gateway cai.
+- Idempotência + reconciliação = 0 double-charge + 0 pagamento perdido.
 
-### Segurança adicional:
+### Negativas
 
-- **Princípio do menor privilégio**: a IAM role do EC2 tem permissão apenas para `secretsmanager:GetSecretValue` nos ARNs específicos dos gateways
-- **Audit trail**: o Secrets Manager loga todo acesso no CloudTrail, permitindo rastrear quem acessou qual credencial e quando
-- **Rotação**: configurar rotação automática (Stripe permite múltiplas API keys ativas simultaneamente, facilitando rotação zero-downtime)
-- **Gateway SOAP legado com certificado**: o certificado `.pem` é armazenado como secret, escrito em disco temporário em runtime (`/tmp/cert.pem`), e removido no shutdown da aplicação. Nunca versionado no Git.
+- **Code surface**: 3 adapters + webhook handlers = mais superfície pra
+  manter. Mitigação: testes de contrato por gateway + shared test helpers.
+- **Debug cross-gateway**: trace precisa incluir qual adapter atendeu. Já
+  coberto pelo span attribute `payment.gateway`.
+- **Config complexa**: cada adapter tem secrets + URLs de sandbox/prod + TOS
+  diferentes. Mitigação: Zod schema com `API_KEY_STRIPE`, `API_KEY_ASAAS`,
+  `SOAP_CERT_PATH` etc., fail-fast no boot.
+
+### Neutras
+
+- Precisa de Secrets Manager + KMS na stack — já justificados por outras
+  partes do produto (não são custo novo desse ADR).
+- Webhook events table = ~10k linhas/dia, retenção 90d = manageable. Purga
+  por TTL.
+
+---
+
+## 11. Referências
+
+- Martin Fowler, *Patterns of Enterprise Application Architecture* — Gateway,
+  Strategy.
+- AWS Architecture Blog (2015), *Exponential Backoff and Jitter*.
+- IETF draft *The Idempotency-Key HTTP Header Field*.
+- Stripe API docs — webhook signing, rotation.
+- PCI DSS v4.0 — scope reduction via tokenization.
+- Kleppmann, *Designing Data-Intensive Applications*, cap. 11 (stream processing,
+  at-least-once semantics).
