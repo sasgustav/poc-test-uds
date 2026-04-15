@@ -167,3 +167,9 @@ src/
 | `POST` | `/v1/faturas` | Cria nova fatura |
 | `PATCH` | `/v1/faturas/:id/status` | Atualiza status (pagar/cancelar) |
 | `GET` | `/v1/health/readiness` | Health check do backend |
+
+---
+
+## Autor
+
+Desenvolvido por **Gustavo Vasconcelos**.
