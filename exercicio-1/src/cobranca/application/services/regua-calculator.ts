@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { DateTime } from 'luxon';
 import { LembreteTipo } from '../../domain/enums/lembrete-tipo.enum';
 import { InvalidVencimentoException } from '../../domain/exceptions/domain.exceptions';
@@ -24,8 +24,8 @@ export const REGUA_PADRAO: readonly ReguaOffset[] = Object.freeze([
 @Injectable()
 export class ReguaCalculator {
   constructor(
-    private readonly offsets: readonly ReguaOffset[] = REGUA_PADRAO,
-    private readonly reminderHour = 9,
+    @Optional() private readonly offsets: readonly ReguaOffset[] = REGUA_PADRAO,
+    @Optional() private readonly reminderHour = 9,
   ) {}
 
   calcularEnvios(dataVencimento: string, timezone: string): { tipo: LembreteTipo; dataEnvio: Date }[] {

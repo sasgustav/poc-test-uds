@@ -1,5 +1,4 @@
 import crypto from 'node:crypto';
-
 import { LembreteStatus } from '../enums/lembrete-status.enum';
 import type { LembreteTipo } from '../enums/lembrete-tipo.enum';
 
