@@ -1,4 +1,4 @@
-# Avaliação Técnica — Desenvolvedor Fullstack (UDS / Talent Studio)
+# Avaliação Técnica — Desenvolvedor Fullstack (Talent Studio)
 
 Repositório com a solução da avaliação técnica. A entrega foi reelevada
 para padrão **sênior especialista**: arquitetura hexagonal, outbox pattern,
