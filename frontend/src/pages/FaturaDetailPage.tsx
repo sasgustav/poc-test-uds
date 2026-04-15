@@ -166,28 +166,33 @@ export function FaturaDetailPage() {
         {/* Main Info Column */}
         <div className="lg:col-span-2 space-y-6">
           <section className="surface-card p-6 sm:p-8">
-            <div className="flex items-start justify-between gap-4 mb-6">
-              <div>
-                <p className="eyebrow flex items-center gap-1.5"><Banknote size={14} /> Detalhes da Cobrança</p>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mt-1">{fatura.descricao}</h1>
+            <div className="flex items-start justify-between gap-4 mb-6 relative">
+              <div className="absolute right-0 top-0 hidden sm:block">
+                <StatusBadge status={fatura.status} />
               </div>
-              <StatusBadge status={fatura.status} />
+              <div className="pr-20">
+                <p className="eyebrow flex items-center gap-1.5"><Banknote size={14} className="text-brand-500" /> Detalhes da Cobrança</p>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mt-2">{fatura.descricao}</h1>
+              </div>
+              <div className="sm:hidden">
+                <StatusBadge status={fatura.status} />
+              </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-5 grid gap-5 sm:grid-cols-2">
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-5 grid gap-5 sm:grid-cols-2 backdrop-blur-sm">
               <div>
-                <p className="text-[13px] font-medium text-slate-500 mb-1 flex items-center gap-1.5"><User size={14} /> Devedor</p>
+                <p className="text-[13px] font-semibold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1.5"><User size={14} className="text-brand-400" /> Sacado</p>
                 <p className="font-semibold text-slate-900">{fatura.nomeDevedor}</p>
               </div>
               <div>
-                <p className="text-[13px] font-medium text-slate-500 mb-1 flex items-center gap-1.5"><Mail size={14} /> E-mail de Contato</p>
-                <p className="text-slate-900">{fatura.emailDevedor}</p>
+                <p className="text-[13px] font-semibold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1.5"><Mail size={14} className="text-brand-400" /> E-mail Notificações</p>
+                <p className="font-medium text-slate-900">{fatura.emailDevedor}</p>
               </div>
             </div>
 
             {actionError && (
               <div className="mt-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                <AlertTriangle size={18} className="shrslate-0 mt-0.5" />
+                <AlertTriangle size={18} className="shrink-0 mt-0.5" />
                 <p>{actionError}</p>
               </div>
             )}
@@ -222,26 +227,30 @@ export function FaturaDetailPage() {
             )}
           </section>
           
-          <section className="surface-card p-6 sm:p-8">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
-                <MailWarning size={18} />
+          <section className="surface-card p-6 sm:p-8 bg-gradient-to-b from-white to-slate-50/30">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 shadow-inner">
+                <MailWarning size={20} strokeWidth={2.5} />
               </div>
-              <h2 className="text-lg font-semibold text-slate-900">Régua de Lembretes</h2>
+              <h2 className="text-[19px] font-bold text-slate-900 tracking-tight">Timeline de Lembretes</h2>
             </div>
             
             {fatura.lembretes.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center">
-                <p className="text-sm font-medium text-slate-500">Nenhum lembrete programado.</p>
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/50 p-10 text-center shadow-sm">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 mb-4 text-slate-400">
+                  <CalendarClock size={24} />
+                </div>
+                <p className="text-[15px] font-semibold text-slate-600">Timeline vazia</p>
+                <p className="text-[13px] text-slate-500 mt-1 max-w-[250px] mx-auto">Nenhum lembrete gerado ou programado para esta cobrança.</p>
               </div>
             ) : (
-              <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 before:to-transparent">
+              <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-brand-200/50 before:via-brand-200 before:to-brand-200/50 before:rounded-full">
                 {fatura.lembretes.map((lembrete) => {
                   const style = lembreteStatusMap[lembrete.status];
                   const Icon = style.icon;
                   return (
                     <div key={lembrete.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-slate-100 text-slate-500 shadow-sm md:mx-auto shrslate-0 z-10 transition-colors group-hover:bg-brand-100 group-hover:text-brand-700">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-slate-100 text-slate-500 shadow-sm md:mx-auto shrink-0 z-10 transition-colors group-hover:bg-brand-100 group-hover:text-brand-700">
                         <Icon size={16} />
                       </div>
                       

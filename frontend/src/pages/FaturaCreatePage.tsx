@@ -57,7 +57,7 @@ export function FaturaCreatePage() {
 
         {error && (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            <AlertTriangle size={18} className="shrslate-0 mt-0.5" />
+            <AlertTriangle size={18} className="shrink-0 mt-0.5" />
             <p>{error}</p>
           </div>
         )}
