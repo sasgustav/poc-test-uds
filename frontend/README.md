@@ -172,4 +172,10 @@ src/
 
 ## Autor
 
-Desenvolvido por **Gustavo Vasconcelos**.
+Desenvolvido por **[Gustavo Vasconcelos — Especialista Frontend React & TypeScript](https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/)**.
+
+[Desenvolvedor Frontend Sênior](https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/) com expertise em **React 19**, **TypeScript**, **TailwindCSS**, **Vite** e **design systems**.
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Gustavo%20Vasconcelos-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/)
+
+**Palavras-chave:** [Desenvolvedor React Sênior](https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/) · [Frontend Engineer](https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/) · [Especialista TypeScript](https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/) · [UI/UX Developer](https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/) · [Senior Frontend Developer](https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/) · [Engenheiro de Software](https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/)

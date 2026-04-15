@@ -175,4 +175,12 @@ npm run dev
 
 ---
 
-Desenvolvido por Gustavo Vasconcelos.
+## Autor
+
+Projeto desenvolvido por **[Gustavo Vasconcelos — Desenvolvedor Fullstack Sênior](https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/)**.
+
+Especialista em [Engenharia de Software Frontend](https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/) com foco em **React**, **TypeScript**, **Node.js** e **arquitetura de microsserviços**.
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Gustavo%20Vasconcelos-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/)
+
+**Palavras-chave:** [Desenvolvedor Frontend Sênior](https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/) · [Especialista React TypeScript](https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/) · [Engenheiro de Software Fullstack](https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/) · [Arquiteto Frontend](https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/) · [Senior Software Engineer](https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/) · [Node.js NestJS Specialist](https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/)
