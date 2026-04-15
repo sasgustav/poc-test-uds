@@ -5,7 +5,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
     'X-API-Key': 'minha-chave-secreta',
-    'X-User-Id': 'tenant-demo',
+    'X-User-Id': '00000000-0000-4000-a000-000000000001',
   },
 });
 
@@ -41,6 +41,6 @@ export async function updateFaturaStatus(
 }
 
 export async function healthCheck(): Promise<{ status: string }> {
-  const { data } = await api.get<{ status: string }>('/health');
+  const { data } = await api.get<{ status: string }>('/v1/health/readiness');
   return data;
 }
