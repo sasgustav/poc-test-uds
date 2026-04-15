@@ -75,6 +75,20 @@ export function Layout() {
       <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 py-8 sm:px-6 lg:px-8">
         <Outlet />
       </main>
+
+      <footer className="border-t border-muted-200 bg-white py-6 text-center text-sm text-muted-500">
+        <p>
+          Desenvolvido por{' '}
+          <a
+            href="https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-ink-900 transition-colors hover:text-brand-600 hover:underline"
+          >
+            Gustavo Vasconcelos
+          </a>
+        </p>
+      </footer>
     </div>
   );
 }
