@@ -41,7 +41,7 @@ async function bootstrap(): Promise<void> {
   );
 
   const openapi = new DocumentBuilder()
-    .setTitle('Régua de Cobranças — API')
+    .setTitle('Régua de Cobranças — API — Gustavo Vasconcelos')
     .setDescription(
       'API de gestão de faturas com régua de lembretes (D-3, D+1, D+7). ' +
         'Arquitetura hexagonal + outbox + idempotência + observabilidade.',
