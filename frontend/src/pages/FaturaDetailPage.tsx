@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { 
-  ArrowLeft, CalendarClock, CreditCard, Banknote, Clock, MailWarning, 
+  Activity, ArrowLeft, CalendarClock, CreditCard, Banknote, Clock, MailWarning, 
   CheckCircle2, XCircle, ArrowRight, Loader2, User, Mail, Globe, 
   RefreshCcw, AlertTriangle, AlertCircle 
 } from 'lucide-react';
