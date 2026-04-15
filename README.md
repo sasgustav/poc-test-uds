@@ -83,6 +83,12 @@ curl -X PATCH http://localhost:3000/v1/faturas/<id>/status \
 
 Swagger UI interativo: **http://localhost:3000/docs**.
 
+### Swagger UI — Documentação Interativa da API
+
+A API possui documentação completa e interativa via Swagger (OpenAPI 3.0), acessível em `http://localhost:3000/docs`. Inclui todos os endpoints de faturas, health checks e métricas, além dos schemas de DTOs (CreateFaturaDto, FaturaResponseDto, LembreteResponseDto, UpdateFaturaStatusDto).
+
+![Swagger UI — Régua de Cobranças API](exercicio-1-backend/docs/screenshots/01-swagger-api.png)
+
 ## Observabilidade
 
 | Endpoint | Uso |
