@@ -1,21 +1,32 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
 @import "tailwindcss";
 
 @theme {
-  --font-sans:
-    "Manrope", "Aptos", "Segoe UI Variable Text", "Segoe UI", "Helvetica Neue", sans-serif;
-  --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --font-sans: "Inter", "Segoe UI Variable Text", "Helvetica Neue", sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, monospace;
 
-  --color-brand-50: #eef4ff;
-  --color-brand-100: #d9e6ff;
-  --color-brand-500: #2f6dff;
-  --color-brand-600: #1f5eff;
-  --color-brand-700: #1d4fd4;
+  /* Premium Multinational Palette */
+  --color-brand-50: #f8fafd;
+  --color-brand-100: #f0f4fc;
+  --color-brand-200: #e0e9f8;
+  --color-brand-300: #c6d6f3;
+  --color-brand-400: #a3bdf0;
+  --color-brand-500: #7c9eeb;
+  --color-brand-600: #5b79e2;
+  --color-brand-700: #465ed5;
+  --color-brand-800: #3a4bb4;
+  --color-brand-900: #33418e;
+  --color-brand-950: #0f172a;
 
-  --color-ink-900: #0f172a;
-  --color-ink-700: #25324a;
-  --color-muted-500: #667085;
-  --color-muted-300: #d3dae7;
+  --color-ink-900: #09090b;
+  --color-ink-800: #18181b;
+  --color-ink-700: #27272a;
+  --color-muted-500: #71717a;
+  --color-muted-400: #a1a1aa;
+  --color-muted-300: #d4d4d8;
+  --color-muted-200: #e4e4e7;
+  --color-muted-100: #f4f4f5;
+  --color-muted-50: #fafafa;
 }
 
 @layer base {
@@ -34,106 +45,108 @@
   }
 
   body {
-    @apply m-0 font-sans text-ink-700 antialiased;
-    background:
-      radial-gradient(circle at 8% 12%, rgba(47, 109, 255, 0.16), transparent 36%),
-      radial-gradient(circle at 86% 8%, rgba(14, 165, 233, 0.1), transparent 38%),
-      linear-gradient(160deg, #f6f8fd 0%, #eef2fb 54%, #f8faff 100%);
-    background-attachment: fixed;
+    @apply m-0 font-sans text-ink-700 antialiased bg-muted-50;
+    selection-background-color: var(--color-brand-200);
   }
 
   a {
-    @apply transition-colors;
+    @apply transition-all duration-200;
   }
 }
 
 @layer components {
+  /* Layout Shell */
   .app-shell {
-    @apply relative isolate min-h-screen;
+    @apply relative min-h-screen bg-muted-50 flex flex-col;
   }
 
-  .app-shell::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0)),
-      repeating-linear-gradient(
-        90deg,
-        rgba(255, 255, 255, 0) 0,
-        rgba(255, 255, 255, 0) 88px,
-        rgba(31, 94, 255, 0.035) 88px,
-        rgba(31, 94, 255, 0.035) 89px
-      );
-  }
-
-  .surface-card {
-    @apply rounded-3xl border border-muted-300/85 bg-white/88 shadow-[0_20px_44px_-30px_rgba(15,23,42,0.45)] backdrop-blur-md;
+  /* Header & Navigation */
+  .top-nav {
+    @apply sticky top-0 z-40 w-full backdrop-blur-md bg-white/70 border-b border-muted-200;
   }
 
   .nav-link {
-    @apply inline-flex items-center rounded-full border border-transparent px-4 py-2 text-sm font-semibold text-muted-500 hover:border-brand-100 hover:bg-brand-50 hover:text-brand-700;
+    @apply inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-muted-500 hover:text-ink-900 hover:bg-muted-100 transition-all;
   }
 
   .nav-link-active {
-    @apply border-brand-100 bg-brand-50 text-brand-700 shadow-[0_10px_20px_-16px_rgba(31,94,255,0.9)];
+    @apply text-ink-900 bg-muted-100 shadow-sm ring-1 ring-muted-200/50;
   }
 
+  /* Typography */
   .eyebrow {
-    @apply text-xs font-semibold uppercase tracking-[0.18em] text-brand-600;
+    @apply text-[11px] font-semibold uppercase tracking-widest text-muted-500 mb-1 block;
   }
 
   .page-title {
-    @apply text-3xl font-extrabold leading-tight tracking-[-0.03em] text-ink-900 sm:text-4xl;
+    @apply text-2xl font-semibold tracking-tight text-ink-900 sm:text-3xl;
   }
 
   .page-subtitle {
-    @apply mt-2 max-w-3xl text-sm text-muted-500 sm:text-base;
+    @apply mt-2 text-sm text-muted-500 sm:text-base max-w-2xl leading-relaxed;
   }
 
-  .btn-primary {
-    @apply inline-flex items-center justify-center rounded-2xl border border-brand-600 bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_18px_28px_-18px_rgba(31,94,255,1)] transition hover:bg-brand-700;
-  }
-
-  .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-2xl border border-muted-300 bg-white px-4 py-2.5 text-sm font-semibold text-ink-700 transition hover:border-brand-100 hover:bg-brand-50 hover:text-brand-700;
-  }
-
-  .btn-danger {
-    @apply inline-flex items-center justify-center rounded-2xl border border-rose-600 bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700;
-  }
-
-  .btn-success {
-    @apply inline-flex items-center justify-center rounded-2xl border border-emerald-600 bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700;
-  }
-
-  .input-label {
-    @apply mb-1.5 block text-sm font-semibold text-ink-900;
-  }
-
-  .input-control {
-    @apply w-full rounded-2xl border border-muted-300 bg-white px-3.5 py-2.5 text-sm text-ink-700 shadow-[0_10px_18px_-16px_rgba(15,23,42,0.8)] outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-100;
+  /* Cards & Surfaces */
+  .surface-card {
+    @apply rounded-xl border border-muted-200 bg-white shadow-sm;
   }
 
   .metric-card {
-    @apply rounded-2xl border border-muted-300/80 bg-gradient-to-br from-white to-brand-50/40 p-4 sm:p-5;
+    @apply rounded-xl border border-muted-200 bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-brand-200;
   }
 
+  /* Buttons */
+  .btn-base {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none bg-ink-900 border border-transparent text-white hover:bg-ink-800 focus:ring-ink-900 shadow-sm;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none border border-muted-200 bg-white text-ink-900 hover:bg-muted-50 focus:ring-muted-200 shadow-sm;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 focus:ring-red-500 shadow-sm;
+  }
+
+  .btn-success {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 focus:ring-emerald-500 shadow-sm;
+  }
+
+  /* Forms */
+  .input-label {
+    @apply mb-1.5 block text-sm font-medium text-ink-900;
+  }
+
+  .input-control {
+    @apply w-full rounded-lg border border-muted-200 bg-white px-3 py-2 text-sm text-ink-900 shadow-sm transition-all placeholder:text-muted-400 focus:border-ink-900 focus:outline-none focus:ring-1 focus:ring-ink-900;
+  }
+
+  /* Data Tables */
   .table-shell {
-    @apply overflow-hidden rounded-3xl border border-muted-300/80 bg-white/92;
+    @apply overflow-x-auto rounded-xl border border-muted-200 bg-white shadow-sm;
   }
 
   .data-table {
-    @apply w-full border-collapse text-left;
+    @apply w-full text-left text-sm;
   }
 
-  .data-table thead th {
-    @apply border-b border-muted-300/70 bg-brand-50/75 px-5 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-muted-500;
+  .data-table thead {
+    @apply border-b border-muted-200 bg-muted-50/50;
   }
 
-  .data-table tbody td {
-    @apply border-b border-muted-300/60 px-5 py-4 text-sm last:border-b-0;
+  .data-table th {
+    @apply h-11 px-4 align-middle font-medium text-muted-500;
+  }
+
+  .data-table tbody tr {
+    @apply border-b border-muted-200 transition-colors hover:bg-muted-50/50 last:border-0;
+  }
+
+  .data-table td {
+    @apply p-4 align-middle;
   }
 }

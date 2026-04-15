@@ -1,56 +1,80 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
+import { LayoutDashboard, PlusCircle, Activity, UserCircle } from 'lucide-react';
 
 export function Layout() {
   const { pathname } = useLocation();
   const links = [
-    { href: '/', label: 'Painel de Faturas' },
-    { href: '/faturas/new', label: 'Nova Fatura' },
+    { href: '/', label: 'Painel de Faturas', icon: LayoutDashboard },
+    { href: '/faturas/new', label: 'Nova Fatura', icon: PlusCircle },
   ];
 
   return (
     <div className="app-shell">
-      <div className="mx-auto flex w-full max-w-[1200px] flex-col px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
-        <header className="surface-card mb-7 overflow-hidden px-5 py-5 sm:px-8">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-2">
-              <p className="eyebrow">Receivables Platform</p>
-              <Link to="/" className="block text-2xl font-extrabold tracking-[-0.03em] text-ink-900">
-                Cobranca Pro Suite
-              </Link>
-              <p className="max-w-2xl text-sm text-muted-500">
-                Operacao centralizada para faturas, status e regua de cobranca com controle em
-                tempo real.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3 sm:items-end">
-              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                Operacao ativa
+      <header className="top-nav">
+        <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-8">
+            <Link to="/" className="flex items-center gap-2 group">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-ink-900 text-white shadow-sm transition-transform group-hover:scale-105">
+                <Activity size={18} />
+              </div>
+              <span className="text-lg font-semibold tracking-tight text-ink-900">
+                CobrançaPro
               </span>
+            </Link>
 
-              <nav className="flex flex-wrap gap-2">
-                {links.map((link) => {
-                  const active = pathname === link.href;
-                  return (
-                    <Link
-                      key={link.href}
-                      to={link.href}
-                      className={`nav-link ${active ? 'nav-link-active' : ''}`}
-                    >
-                      {link.label}
-                    </Link>
-                  );
-                })}
-              </nav>
-            </div>
+            <nav className="hidden items-center md:flex gap-1">
+              {links.map((link) => {
+                const active = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
+                const Icon = link.icon;
+                return (
+                  <Link
+                    key={link.href}
+                    to={link.href}
+                    className={`nav-link ${active ? 'nav-link-active' : ''}`}
+                  >
+                    <Icon size={16} className={active ? 'text-ink-900' : 'text-muted-400'} />
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </nav>
           </div>
-        </header>
 
-        <main className="pb-8">
-          <Outlet />
-        </main>
-      </div>
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 uppercase tracking-wide">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              Operação Ativa
+            </div>
+            <button className="flex h-9 w-9 items-center justify-center rounded-full border border-muted-200 bg-white text-muted-500 hover:text-ink-900 hover:bg-muted-50 transition-colors">
+              <UserCircle size={20} />
+            </button>
+          </div>
+        </div>
+        {/* Mobile Navigation */}
+        <div className="flex h-12 items-center overflow-x-auto border-t border-muted-200 px-4 md:hidden gap-1">
+          {links.map((link) => {
+            const active = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
+            const Icon = link.icon;
+            return (
+              <Link
+                key={link.href}
+                to={link.href}
+                className={`nav-link whitespace-nowrap ${active ? 'nav-link-active' : ''}`}
+              >
+                <Icon size={14} className={active ? 'text-ink-900' : 'text-muted-400'} />
+                {link.label}
+              </Link>
+            );
+          })}
+        </div>
+      </header>
+
+      <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 py-8 sm:px-6 lg:px-8">
+        <Outlet />
+      </main>
     </div>
   );
 }
