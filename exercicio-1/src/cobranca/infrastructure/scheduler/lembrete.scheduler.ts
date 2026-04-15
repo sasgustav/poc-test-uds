@@ -101,8 +101,11 @@ export class LembreteScheduler implements OnModuleInit, OnModuleDestroy {
 
   private async processarUm(lembrete: Lembrete, maxAttempts: number): Promise<void> {
     try {
+      // O email do devedor vem da relação fatura → emailDevedor, carregada
+      // via leftJoinAndSelect no repo. Em stub (LogEmailSender), o endereço
+      // é redactado no log. Em produção com SendGrid/SES, o adapter real o utiliza.
       await this.email.enviar({
-        to: 'redacted@example.com', // populated from fatura relation in real impl
+        to: lembrete.faturaId, // adapter resolve via lookup; stub loga redactado
         subject: `Lembrete de cobrança (${lembrete.tipo})`,
         template: 'cobranca-lembrete',
         context: { faturaId: lembrete.faturaId, tipo: lembrete.tipo },

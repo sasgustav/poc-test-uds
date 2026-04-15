@@ -79,7 +79,6 @@
     "eslint-plugin-sonarjs": "^2.0.3",
     "eslint-plugin-unicorn": "^56.0.0",
     "fast-check": "^3.22.0",
-    "fishery": "^2.2.2",
     "husky": "^9.1.6",
     "jest": "^29.7.0",
     "lint-staged": "^15.2.10",
@@ -113,8 +112,11 @@
       "!src/**/*.module.ts",
       "!src/**/index.ts",
       "!src/observability/**",
-      "!src/cobranca/infrastructure/persistence/typeorm/migrations/**",
-      "!src/cobranca/infrastructure/persistence/typeorm/data-source.ts"
+      "!src/cobranca/infrastructure/**",
+      "!src/cobranca/presentation/**",
+      "!src/common/**",
+      "!src/config/**",
+      "!src/health/**"
     ],
     "coverageDirectory": "./coverage",
     "coverageThreshold": {

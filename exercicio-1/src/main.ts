@@ -57,13 +57,21 @@ async function bootstrap(): Promise<void> {
   await app.listen(port);
   app.get(Logger).log(`API up on :${port} — docs at /docs`);
 
+  // Shutdown coordenado: flush OTel antes de fechar o app NestJS.
+  // NestJS enableShutdownHooks() cuida do app.close(); aqui apenas adicionamos
+  // o flush do tracing SDK ANTES do close.
+  const shutdownOnce = (() => {
+    let called = false;
+    return () => {
+      if (called) return;
+      called = true;
+      const flush = tracingSdk ? tracingSdk.shutdown() : Promise.resolve();
+      void flush.catch(() => void 0).finally(() => void app.close());
+    };
+  })();
+
   for (const sig of ['SIGTERM', 'SIGINT'] as const) {
-    process.once(sig, () => {
-      const shutdown = tracingSdk ? tracingSdk.shutdown() : Promise.resolve();
-      void shutdown.finally(() => {
-        void app.close();
-      });
-    });
+    process.once(sig, shutdownOnce);
   }
 }
 

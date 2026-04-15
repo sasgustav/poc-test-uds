@@ -118,11 +118,18 @@ Client                  Controller          CriarFaturaUC    UoW/Postgres
    │      │ cron "vencer" (roadmap)
    │      ▼
    │  ┌─────────┐  mudarStatus(PAGA)     ┌──────┐
-   └──┤ VENCIDA ├───────────────────────►│ PAGA │
-      └─────────┘                        └──────┘
+   │  │ VENCIDA ├───────────────────────►│ PAGA │
+   │  └────┬────┘                        └──────┘
+   │       │ mudarStatus(CANCELADA)
+   │       └──►┌───────────┐
+   │           │ CANCELADA │
+   │           └───────────┘
+   └───────────────────────────────────────────────
 ```
 
-Transições não listadas disparam `InvalidStatusTransitionException` (422).
+Transições permitidas: PENDENTE→{PAGA,VENCIDA,CANCELADA}, VENCIDA→{PAGA,CANCELADA}.
+PAGA e CANCELADA são terminais — qualquer outra transição dispara
+`InvalidStatusTransitionException` (422).
 
 ---
 
@@ -228,7 +235,7 @@ Solução: coluna `timezone` IANA na fatura (default via `DEFAULT_TIMEZONE`),
 - **Config validation (Zod, fail-fast):** processo cai no boot se `DB_PASSWORD`
   ausente, `API_KEY_SHA256` mal formatado etc. Evita bugs "undefined virou
   string 'undefined' e o app rodou".
-- **Helmet** + **CORS** restritivo via `CORS_ORIGINS` csv (default `*` só em dev).
+- **Helmet** + **CORS** restritivo via `CORS_ORIGINS` csv (default `http://localhost:3000`).
 - **Rate limit** por IP via `@nestjs/throttler` (`THROTTLE_LIMIT` por
   `THROTTLE_TTL_SECONDS`). Em prod real seria por `userId` do JWT.
 - **API Key guard:** `sha256(key)` comparado com `API_KEY_SHA256` via
@@ -261,13 +268,14 @@ Solução: coluna `timezone` IANA na fatura (default via `DEFAULT_TIMEZONE`),
 
 | Tipo | Onde | O que prova |
 |------|------|-------------|
-| Unit — domínio | `test/unit/domain/` | Invariantes de `Fatura`, `Money`, state machine |
-| Unit — application | `test/unit/application/` | Use-cases sobre ports in-memory; tenant isolation; rollback |
-| Property-based | `fast-check` em Money + ReguaCalculator | "∀ data válida, 3 lembretes às 09:00 do TZ" |
+| Unit — domínio | `test/unit/domain/` | Invariantes de `Fatura` (state machine completa: PENDENTE→VENCIDA→PAGA/CANCELADA), `Money` (string parsing, currency validation, equals), `Email` (normalização, equals, limites), `Lembrete` (backoff, DLQ, state guards, descartar) |
+| Unit — application | `test/unit/application/` | Todos os 4 use-cases; tenant isolation; rollback; clamp defensivo de paginação |
+| Property-based | `fast-check` em Money + ReguaCalculator + Lembrete | "∀ data válida, 3 lembretes às 09:00 do TZ"; round-trip cents⇄decimal; delay ≤ cap |
 | Fake random mock | `Lembrete.marcarFalha` | backoff delay ≤ cap; threshold DLQ |
 | E2E | `test/e2e/` (Postgres real, `npm run test:e2e`) | Golden path + idempotência + tenant 404 |
 
-Coverage threshold: branches 80%, functions/lines/statements 85%.
+Coverage threshold (domínio + application): branches 80%, functions/lines/statements 85%.
+Atingido: statements 96%, branches 97%, functions 90%, lines 96%.
 
 **Por que não pg-mem?** Não implementa advisory locks nem
 `SELECT ... FOR UPDATE SKIP LOCKED`, ou seja, **mascarava** os bugs de
@@ -352,4 +360,47 @@ steps:
 - Coverage thresholds: branches 80%, functions/lines/statements 85%.
 - E2E separado (`npm run test:e2e`): requer Postgres real, roda em stage
   dedicado do CI com `docker-compose up -d postgres`.
+
+---
+
+## 12. Auditoria de qualidade e correções aplicadas
+
+Auditoria completa feita em todas as camadas da aplicação, identificando e
+corrigindo problemas de **segurança**, **correção** e **design**:
+
+### Segurança
+
+| Fix | Severidade | Detalhe |
+|-----|-----------|---------|
+| Error message leakage em 500s | CRITICAL | `ProblemJsonFilter` expunha `err.message` em 500 → substituído por mensagem genérica; detalhe vai apenas ao log |
+| Guard ordering | HIGH | `ThrottlerGuard` antes de `ApiKeyGuard` permitia requests não autenticados consumirem budget de rate-limit → invertida a ordem |
+| `@ApiBearerAuth()` espúrio | LOW | Swagger sugeria Bearer auth inexistente → removido |
+| CORS default `*` | MEDIUM | `docker-compose.yml` tinha `CORS_ORIGINS: '*'` → substituído por `http://localhost:3000` |
+
+### Correção
+
+| Fix | Severidade | Detalhe |
+|-----|-----------|---------|
+| IEEE 754 em `Money.fromDecimal` | CRITICAL | `Math.round(n * 100)` falha para 1.005 (100 em vez de 101) → parsing via string split |
+| Currency data loss no mapper | HIGH | `FaturaMapper.toPersistence` hardcoded `currency = 'BRL'` ignorando campo real → usa `fatura.valor.currency` |
+| `ProblemJsonFilter.statusFromCode` frágil | MEDIUM | Pattern-matching via `includes()` em strings → mapa explícito `CODE_STATUS_MAP` |
+| Status DTO aceitava targets inválidos | MEDIUM | `@IsEnum(FaturaStatus)` aceitava PENDENTE/VENCIDA como target → `@IsIn([PAGA, CANCELADA])` |
+
+### Design
+
+| Fix | Severidade | Detalhe |
+|-----|-----------|---------|
+| `node:crypto` no domain entity | HIGH | `Lembrete` importava `randomInt` de runtime Node → substituído por `Math.random()` (jitter não requer CSPRNG) |
+| State guards ausentes em Lembrete | HIGH | `marcarEnviado`/`marcarFalha` aceitavam qualquer status → guards que lançam Error se status ≠ PENDENTE |
+| Status DESCARTADO inalcançável | MEDIUM | Nenhum método levava a `DESCARTADO` → adicionado `descartar(now)` |
+| Shutdown race condition | MEDIUM | Dois handlers SIGTERM/SIGINT podiam chamar `app.close()` duas vezes → padrão `shutdownOnce` com flag |
+| Outbox processor sem proteção de falha | MEDIUM | Erro em `marcarFalha` quebrava loop inteiro → try/catch individual |
+
+### Limitações documentadas (não corrigidas — alto risco sem testes de integração)
+
+- **Idempotency TOCTOU race**: `IdempotencyInterceptor` faz check-then-act sem lock atômico; em concorrência extrema, duas requests com mesma key podem ambas passar. Correção: `INSERT ... ON CONFLICT` atômico.
+- **Advisory lock + EntityManager**: schedulers recebem `DataSource` mas repos usam repositório injetado fora da transação. Em cenário real, o repo deveria usar o `EntityManager` da transação.
+- **Ausência de outbox event em PATCH status**: `AtualizarStatusFaturaUseCase` não publica evento outbox na mudança de status.
+- **Sem optimistic concurrency**: tabela `faturas` não tem coluna `version` para `@Version` — última escrita ganha.
+
 

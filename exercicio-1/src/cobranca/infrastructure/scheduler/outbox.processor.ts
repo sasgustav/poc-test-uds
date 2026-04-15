@@ -8,6 +8,7 @@ import { OUTBOX_REPOSITORY } from '../../domain/ports/tokens';
 import { tryAdvisoryLock } from './advisory-lock';
 
 const OUTBOX_LOCK = 'regua-cobrancas:outbox-processor';
+const MAX_OUTBOX_ATTEMPTS = 10;
 
 /**
  * Outbox processor. Lê eventos não processados e os "publica".
@@ -54,7 +55,15 @@ export class OutboxProcessor implements OnModuleDestroy {
             this.published.add(1, { eventType: event.eventType });
           } catch (error) {
             const msg = error instanceof Error ? error.message : String(error);
-            await this.outbox.marcarFalha(event.id, msg);
+            try {
+              await this.outbox.marcarFalha(event.id, msg);
+            } catch (markError) {
+              this.logger.error({
+                msg: 'outbox.marcarFalha.error',
+                eventId: event.id,
+                err: markError instanceof Error ? markError.message : String(markError),
+              });
+            }
             this.failures.add(1, { eventType: event.eventType });
           }
         }

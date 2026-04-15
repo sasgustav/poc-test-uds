@@ -1,4 +1,3 @@
-import { randomInt } from 'node:crypto';
 import { LembreteStatus } from '../enums/lembrete-status.enum';
 import type { LembreteTipo } from '../enums/lembrete-tipo.enum';
 
@@ -52,6 +51,11 @@ export class Lembrete {
   get createdAt(): Date { return this.props.createdAt; }
 
   marcarEnviado(now: Date): void {
+    if (this.props.status !== LembreteStatus.PENDENTE) {
+      throw new Error(
+        `Lembrete ${this.props.id}: não pode marcar como enviado no status ${this.props.status}`,
+      );
+    }
     this.props.status = LembreteStatus.ENVIADO;
     this.props.tentativas += 1;
     this.props.processadoEm = now;
@@ -63,6 +67,9 @@ export class Lembrete {
    * Retry com exponential backoff + jitter (full jitter, AWS arch blog 2015).
    * Fórmula: delay = random(0, min(base * 2^attempt, cap))
    * Evita thundering herd quando provedor de email volta do incidente.
+   *
+   * Usa Math.random() em vez de node:crypto para manter a entidade
+   * livre de dependências de runtime. Jitter não requer segurança criptográfica.
    */
   marcarFalha(opts: {
     erro: string;
@@ -71,6 +78,11 @@ export class Lembrete {
     baseMs?: number;
     capMs?: number;
   }): void {
+    if (this.props.status !== LembreteStatus.PENDENTE) {
+      throw new Error(
+        `Lembrete ${this.props.id}: não pode marcar falha no status ${this.props.status}`,
+      );
+    }
     const base = opts.baseMs ?? 1000;
     const cap = opts.capMs ?? 60_000;
     this.props.tentativas += 1;
@@ -82,8 +94,20 @@ export class Lembrete {
       return;
     }
     const maxDelay = Math.min(base * 2 ** this.props.tentativas, cap);
-    const jitter = randomInt(maxDelay);
+    const jitter = Math.floor(Math.random() * maxDelay);
     this.props.proximaTentativa = new Date(opts.now.getTime() + jitter);
     this.props.status = LembreteStatus.PENDENTE;
+  }
+
+  /** Descarta o lembrete (ex: fatura cancelada antes do envio). */
+  descartar(now: Date): void {
+    if (this.props.status !== LembreteStatus.PENDENTE) {
+      throw new Error(
+        `Lembrete ${this.props.id}: não pode descartar no status ${this.props.status}`,
+      );
+    }
+    this.props.status = LembreteStatus.DESCARTADO;
+    this.props.processadoEm = now;
+    this.props.proximaTentativa = null;
   }
 }

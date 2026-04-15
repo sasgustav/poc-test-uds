@@ -17,7 +17,6 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
-  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiHeader,
@@ -45,7 +44,6 @@ import { UpdateFaturaStatusDto } from './dtos/update-fatura-status.dto';
 
 @ApiTags('faturas')
 @ApiSecurity('ApiKey')
-@ApiBearerAuth()
 @ApiHeader({ name: 'X-User-Id', description: 'UUID do tenant autenticado (demo).', required: false })
 @Controller({ path: 'faturas', version: '1' })
 export class FaturaController {

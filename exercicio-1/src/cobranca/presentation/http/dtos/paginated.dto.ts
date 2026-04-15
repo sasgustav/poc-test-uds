@@ -9,11 +9,6 @@ export class PaginationMetaDto {
   @ApiProperty() hasPrev!: boolean;
 }
 
-export class PaginatedDto<T> {
-  data!: T[];
-  pagination!: PaginationMetaDto;
-}
-
 export function buildPagination(
   page: number,
   pageSize: number,

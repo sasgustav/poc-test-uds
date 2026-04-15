@@ -29,10 +29,5 @@ export function startTracing(): NodeSDK | null {
   });
 
   sdk.start();
-
-  process.on('SIGTERM', () => {
-    sdk.shutdown().catch(() => void 0);
-  });
-
   return sdk;
 }

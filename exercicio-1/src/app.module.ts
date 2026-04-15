@@ -41,8 +41,9 @@ import { AppMetricsModule } from './observability/metrics.module';
     HealthModule,
   ],
   providers: [
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // Auth ANTES de throttle: requests não-autenticados não consomem quota
     { provide: APP_GUARD, useClass: ApiKeyGuard },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_FILTER, useClass: ProblemJsonFilter },
   ],
 })

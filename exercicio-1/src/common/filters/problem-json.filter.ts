@@ -47,6 +47,14 @@ export class ProblemJsonFilter implements ExceptionFilter {
         title,
         err: exception instanceof Error ? exception.stack : String(exception),
       });
+    } else if (status >= 400) {
+      this.logger.warn({
+        msg: 'request.client_error',
+        status,
+        code,
+        detail,
+        url: request.originalUrl ?? request.url,
+      });
     }
 
     response
@@ -87,20 +95,29 @@ export class ProblemJsonFilter implements ExceptionFilter {
     }
 
     const err = exception instanceof Error ? exception : new Error(String(exception));
+    // Nunca expor stack/mensagem interna para o cliente em 5xx — risco de vazamento
+    // de caminhos, queries SQL ou dados sensíveis. Detalhes ficam apenas no log acima.
     return {
       status: HttpStatus.INTERNAL_SERVER_ERROR,
       title: 'Internal Server Error',
-      detail: err.message,
+      detail: 'An unexpected error occurred. Please contact support with the traceId.',
       code: 'internal.error',
     };
   }
 
+  /** Mapa explícito de domain codes → HTTP status. Evita string-matching frágil. */
+  private static readonly CODE_STATUS_MAP: Record<string, HttpStatus> = {
+    'fatura.not_found': HttpStatus.NOT_FOUND,
+    'fatura.invalid_status_transition': HttpStatus.CONFLICT,
+    'fatura.invalid_vencimento': HttpStatus.BAD_REQUEST,
+    'domain.invalid_money': HttpStatus.BAD_REQUEST,
+    'domain.invalid_email': HttpStatus.BAD_REQUEST,
+    'idempotency.conflict': HttpStatus.CONFLICT,
+    'outbox.publish_failed': HttpStatus.INTERNAL_SERVER_ERROR,
+  };
+
   private statusFromCode(code: string): number {
-    if (code.endsWith('.not_found')) return HttpStatus.NOT_FOUND;
-    if (code.includes('invalid') || code.includes('conflict')) {
-      return code.includes('conflict') ? HttpStatus.CONFLICT : HttpStatus.BAD_REQUEST;
-    }
-    return HttpStatus.UNPROCESSABLE_ENTITY;
+    return ProblemJsonFilter.CODE_STATUS_MAP[code] ?? HttpStatus.UNPROCESSABLE_ENTITY;
   }
 }
 

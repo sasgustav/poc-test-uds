@@ -3,14 +3,14 @@ services:
     image: postgres:16-alpine
     container_name: cobranca-postgres
     environment:
-      POSTGRES_DB: cobranca_db
-      POSTGRES_USER: cobranca_user
-      POSTGRES_PASSWORD: cobranca_pass
+      POSTGRES_DB: ${POSTGRES_DB:-cobranca_db}
+      POSTGRES_USER: ${POSTGRES_USER:-cobranca_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cobranca_pass}
     ports: ['5432:5432']
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U cobranca_user -d cobranca_db']
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-cobranca_user} -d ${POSTGRES_DB:-cobranca_db}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -40,14 +40,15 @@ services:
       PORT: 3000
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USERNAME: cobranca_user
-      DB_PASSWORD: cobranca_pass
-      DB_DATABASE: cobranca_db
+      DB_USERNAME: ${POSTGRES_USER:-cobranca_user}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-cobranca_pass}
+      DB_DATABASE: ${POSTGRES_DB:-cobranca_db}
       DEFAULT_TIMEZONE: America/Sao_Paulo
       OTEL_ENABLED: 'true'
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
       OTEL_SERVICE_NAME: regua-cobrancas
-      CORS_ORIGINS: '*'
+      # Em produção, definir CORS_ORIGINS explicitamente (ex: https://app.exemplo.com.br)
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
     ports: ['3000:3000']
     restart: unless-stopped
 
