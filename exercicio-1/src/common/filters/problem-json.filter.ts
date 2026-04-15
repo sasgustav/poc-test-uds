@@ -94,7 +94,6 @@ export class ProblemJsonFilter implements ExceptionFilter {
       };
     }
 
-    const err = exception instanceof Error ? exception : new Error(String(exception));
     // Nunca expor stack/mensagem interna para o cliente em 5xx — risco de vazamento
     // de caminhos, queries SQL ou dados sensíveis. Detalhes ficam apenas no log acima.
     return {

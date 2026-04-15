@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 import { LembreteStatus } from '../enums/lembrete-status.enum';
 import type { LembreteTipo } from '../enums/lembrete-tipo.enum';
 
@@ -94,7 +96,7 @@ export class Lembrete {
       return;
     }
     const maxDelay = Math.min(base * 2 ** this.props.tentativas, cap);
-    const jitter = Math.floor(Math.random() * maxDelay);
+    const jitter = crypto.randomInt(0, maxDelay);
     this.props.proximaTentativa = new Date(opts.now.getTime() + jitter);
     this.props.status = LembreteStatus.PENDENTE;
   }

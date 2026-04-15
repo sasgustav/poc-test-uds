@@ -1,6 +1,6 @@
 import { ListarFaturasUseCase } from '../../../src/cobranca/application/use-cases/listar-faturas.use-case';
-import { InMemoryFaturaRepository } from '../../support/in-memory-repos';
 import { makeFatura } from '../../support/factories';
+import { InMemoryFaturaRepository } from '../../support/in-memory-repos';
 
 describe('ListarFaturasUseCase', () => {
   let repo: InMemoryFaturaRepository;

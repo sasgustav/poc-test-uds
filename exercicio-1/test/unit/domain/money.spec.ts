@@ -72,7 +72,7 @@ describe('Money VO', () => {
   });
 
   it('toString formata com moeda e 2 casas', () => {
-    expect(Money.fromCents(15050).toString()).toBe('BRL 150.50');
+    expect(Money.fromCents(15_050).toString()).toBe('BRL 150.50');
   });
 
   it('rejeita valor que excede limite de precisão', () => {

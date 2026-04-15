@@ -6,6 +6,7 @@
     "^.+\\.(t|j)s$": "ts-jest"
   },
   "testEnvironment": "node",
+  "setupFiles": ["<rootDir>/test/e2e/setup-env.ts"],
   "moduleNameMapper": {
     "^src/(.*)$": "<rootDir>/src/$1"
   }

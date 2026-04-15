@@ -8,7 +8,6 @@ import { OUTBOX_REPOSITORY } from '../../domain/ports/tokens';
 import { tryAdvisoryLock } from './advisory-lock';
 
 const OUTBOX_LOCK = 'regua-cobrancas:outbox-processor';
-const MAX_OUTBOX_ATTEMPTS = 10;
 
 /**
  * Outbox processor. Lê eventos não processados e os "publica".

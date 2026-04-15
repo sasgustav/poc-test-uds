@@ -1,7 +1,7 @@
-import { FaturaNotFoundException } from '../../../src/cobranca/domain/exceptions/domain.exceptions';
 import { BuscarFaturaUseCase } from '../../../src/cobranca/application/use-cases/buscar-fatura.use-case';
-import { InMemoryFaturaRepository } from '../../support/in-memory-repos';
+import { FaturaNotFoundException } from '../../../src/cobranca/domain/exceptions/domain.exceptions';
 import { makeFatura } from '../../support/factories';
+import { InMemoryFaturaRepository } from '../../support/in-memory-repos';
 
 describe('BuscarFaturaUseCase', () => {
   let repo: InMemoryFaturaRepository;
