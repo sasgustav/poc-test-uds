@@ -17,8 +17,6 @@ export function FaturaListPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError('');
 
     listFaturas(page, 10)
       .then((res) => {
@@ -86,7 +84,15 @@ export function FaturaListPage() {
       <div className="surface-card p-8 text-center sm:p-12">
         <h1 className="text-2xl font-bold text-ink-900">Falha ao carregar</h1>
         <p className="mt-2 text-sm text-rose-700">{error}</p>
-        <button type="button" className="btn-secondary mt-5" onClick={() => setReloadKey((v) => v + 1)}>
+        <button
+          type="button"
+          className="btn-secondary mt-5"
+          onClick={() => {
+            setLoading(true);
+            setError('');
+            setReloadKey((v) => v + 1);
+          }}
+        >
           Tentar novamente
         </button>
       </div>
@@ -220,7 +226,11 @@ export function FaturaListPage() {
               <button
                 type="button"
                 disabled={!pagination.hasPrev}
-                onClick={() => setPage((value) => value - 1)}
+                onClick={() => {
+                  setLoading(true);
+                  setError('');
+                  setPage((value) => value - 1);
+                }}
                 className="btn-secondary disabled:cursor-not-allowed disabled:opacity-45"
               >
                 Pagina anterior
@@ -228,7 +238,11 @@ export function FaturaListPage() {
               <button
                 type="button"
                 disabled={!pagination.hasNext}
-                onClick={() => setPage((value) => value + 1)}
+                onClick={() => {
+                  setLoading(true);
+                  setError('');
+                  setPage((value) => value + 1);
+                }}
                 className="btn-secondary disabled:cursor-not-allowed disabled:opacity-45"
               >
                 Proxima pagina

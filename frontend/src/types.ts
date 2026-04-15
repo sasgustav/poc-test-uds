@@ -1,22 +1,28 @@
-export enum FaturaStatus {
-  PENDENTE = 'pendente',
-  PAGA = 'paga',
-  VENCIDA = 'vencida',
-  CANCELADA = 'cancelada',
-}
+export const FaturaStatus = {
+  PENDENTE: 'pendente',
+  PAGA: 'paga',
+  VENCIDA: 'vencida',
+  CANCELADA: 'cancelada',
+} as const;
 
-export enum LembreteStatus {
-  PENDENTE = 'pendente',
-  ENVIADO = 'enviado',
-  FALHOU = 'falhou',
-  DESCARTADO = 'descartado',
-}
+export type FaturaStatus = (typeof FaturaStatus)[keyof typeof FaturaStatus];
 
-export enum LembreteTipo {
-  D_MENOS_3 = 'D-3',
-  D_MAIS_1 = 'D+1',
-  D_MAIS_7 = 'D+7',
-}
+export const LembreteStatus = {
+  PENDENTE: 'pendente',
+  ENVIADO: 'enviado',
+  FALHOU: 'falhou',
+  DESCARTADO: 'descartado',
+} as const;
+
+export type LembreteStatus = (typeof LembreteStatus)[keyof typeof LembreteStatus];
+
+export const LembreteTipo = {
+  D_MENOS_3: 'D-3',
+  D_MAIS_1: 'D+1',
+  D_MAIS_7: 'D+7',
+} as const;
+
+export type LembreteTipo = (typeof LembreteTipo)[keyof typeof LembreteTipo];
 
 export interface Lembrete {
   id: string;

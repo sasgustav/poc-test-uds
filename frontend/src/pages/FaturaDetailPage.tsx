@@ -68,10 +68,6 @@ export function FaturaDetailPage() {
     if (!id) return;
     let cancelled = false;
 
-    setLoading(true);
-    setLoadError('');
-    setActionError('');
-
     getFatura(id)
       .then((data) => {
         if (!cancelled) setFatura(data);
