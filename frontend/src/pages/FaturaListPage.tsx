@@ -117,7 +117,7 @@ export function FaturaListPage() {
   }
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-6 sm:space-y-8 animate-in">
       
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>

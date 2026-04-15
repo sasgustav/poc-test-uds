@@ -150,7 +150,7 @@ export function FaturaDetailPage() {
   const due = dueHint(fatura.dataVencimento);
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-6 sm:space-y-8 animate-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-muted-500 hover:text-ink-900 transition-colors">
           <ArrowLeft size={16} />

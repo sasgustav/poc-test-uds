@@ -38,7 +38,7 @@ export function FaturaCreatePage() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_380px] animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_380px] animate-in">
       <section className="surface-card p-6 sm:p-8">
         <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-muted-500 hover:text-ink-900 transition-colors mb-6">
           <ArrowLeft size={16} />
