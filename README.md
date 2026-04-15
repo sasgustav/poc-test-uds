@@ -13,6 +13,7 @@ ESLint strict-type-checked).
 ├── exercicio-1/   Backend NestJS — Régua de Cobranças (overhaul hexagonal)
 ├── exercicio-2/   Code Review: tenant leak + keyset + observabilidade
 ├── exercicio-3/   ADR 001 — Integração multi-gateway de pagamentos
+├── frontend/      Interface web React + TypeScript + Vite (CobrançaPro)
 ├── docker-compose.yml   Postgres + Jaeger + app
 ├── .github/workflows/   CI (lint · typecheck · test · build)
 └── AI_USAGE.md          Disclosure de uso de IA
@@ -120,15 +121,57 @@ principais:
 | `OTEL_ENABLED`, `OTEL_EXPORTER_OTLP_ENDPOINT` | false, — | Tracing |
 | `CORS_ORIGINS` | `*` | CSV allowlist |
 
-## Por que esse nível de rigor
 
-A avaliação original foi classificada como "pleno". O gap para sênior não era
-o quê foi entregue — os endpoints funcionam — mas **como se comportaria em
-produção**: o scheduler tinha flag em memória (quebra em multi-instância), não
-havia idempotência HTTP, `synchronize:true` em produção, filtro por `userId`
-sem enforcement por contrato, zero observabilidade estruturada. O overhaul
-atual corrige esses eixos sem sacrificar legibilidade — cada decisão está
-documentada nos `RESPOSTAS.md` de cada exercício com tradeoffs alternativas.
+---
+
+## Frontend — CobrançaPro
+
+Interface web do sistema **CobrançaPro**, construída com **React 19**, **TypeScript**, **Vite** e **TailwindCSS v4**. Permite o gerenciamento completo de faturas de cobrança com régua de lembretes automatizada.
+
+### Como executar o frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+# Acesse http://localhost:5173
+```
+
+> O frontend depende do backend NestJS rodando na porta 3000. O Vite proxy redireciona `/v1` para `http://localhost:3000`.
+
+### Telas da Aplicação
+
+#### 1. Painel de Faturas (Dashboard)
+
+**Rota:** `/` — Dashboard operacional com cards de métricas (volume financeiro, pendências, ticket médio), tabela paginada de faturas e ações rápidas. Responsivo: em mobile a tabela se transforma em cards empilhados.
+
+![Painel de Faturas](frontend/docs/screenshots/01-painel-faturas.png)
+
+#### 2. Emitir Nova Cobrança
+
+**Rota:** `/faturas/new` — Formulário de criação com layout em duas colunas: dados do sacado e detalhes financeiros à esquerda, painel de dicas e explicação da régua de lembretes (D-3, D+1, D+7) à direita.
+
+![Nova Fatura](frontend/docs/screenshots/02-nova-fatura.png)
+
+#### 3. Detalhes da Fatura
+
+**Rota:** `/faturas/:id` — Visualização completa com dados da cobrança, timeline visual da régua de lembretes (status de envio e tentativas), resumo financeiro, ciclo de vida do status e botões de ação condicionais (confirmar pagamento / cancelar).
+
+![Detalhes da Fatura](frontend/docs/screenshots/03-detalhes-fatura.png)
+
+### Stack do Frontend
+
+| Tecnologia | Finalidade |
+|---|---|
+| React 19 | Biblioteca de UI |
+| TypeScript | Tipagem estática |
+| Vite | Build tool e dev server |
+| TailwindCSS v4 | Estilização utilitária |
+| React Router DOM | Roteamento SPA |
+| Axios | Cliente HTTP |
+| Lucide React | Biblioteca de ícones |
+
+> Documentação completa das telas com detalhes de cada elemento: [`frontend/README.md`](frontend/README.md)
 
 ---
 
