@@ -80,9 +80,9 @@ describe('Faturas E2E', () => {
       .post('/v1/faturas')
       .set('X-User-Id', userA)
       .send({
-        nomeDevedor: 'A',
+        nomeDevedor: 'User A',
         emailDevedor: 'a@a.com',
-        descricao: 'desc',
+        descricao: 'desc tenant',
         valor: 10,
         dataVencimento: '2026-08-01',
       })
