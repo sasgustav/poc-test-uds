@@ -22,11 +22,11 @@ export function Layout() {
       <header className="top-nav">
         <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-8">
-            <Link to="/" className="flex items-center gap-2 group">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-ink-900 text-white shadow-sm transition-transform group-hover:scale-105">
-                <Activity size={18} />
+            <Link to="/" className="flex items-center gap-2.5 group">
+              <div className="relative flex h-9 w-9 items-center justify-center rounded-[10px] bg-gradient-to-br from-brand-700 to-brand-950 text-white shadow-brand-500/20 shadow-[0_2px_10px] transition-transform duration-300 group-hover:scale-105 group-hover:shadow-[0_4px_14px]">
+                <Activity size={18} strokeWidth={2.5} />
               </div>
-              <span className="text-lg font-semibold tracking-tight text-ink-900">
+              <span className="text-[17px] font-bold tracking-tight text-slate-900">
                 CobrançaPro
               </span>
             </Link>
@@ -39,9 +39,9 @@ export function Layout() {
                   <Link
                     key={link.href}
                     to={link.href}
-                    className={`nav-link ${active ? 'nav-link-active' : ''}`}
+                    className={`nav-link ${active ? 'nav-lslate-active' : ''}`}
                   >
-                    <Icon size={16} className={active ? 'text-ink-900' : 'text-muted-400'} />
+                    <Icon size={16} className={active ? 'text-slate-900' : 'text-slate-400'} />
                     {link.label}
                   </Link>
                 );
@@ -59,13 +59,13 @@ export function Layout() {
               </span>
               {cfg.label}
             </div>
-            <button className="flex h-9 w-9 items-center justify-center rounded-full border border-muted-200 bg-white text-muted-500 hover:text-ink-900 hover:bg-muted-50 transition-colors">
-              <UserCircle size={20} />
+            <button className="flex h-[38px] w-[38px] items-center justify-center rounded-full border border-slate-200/80 bg-white/50 text-slate-500 hover:text-slate-900 hover:bg-slate-100 hover:border-slate-300 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 active:scale-95 shadow-sm">
+              <UserCircle size={22} strokeWidth={1.5} />
             </button>
           </div>
         </div>
         {/* Mobile Navigation */}
-        <div className="flex h-12 items-center overflow-x-auto border-t border-muted-200 px-4 md:hidden gap-1">
+        <div className="flex h-12 items-center overflow-x-auto border-t border-slate-200 px-4 md:hidden gap-1">
           {links.map((link) => {
             const active = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
             const Icon = link.icon;
@@ -73,9 +73,9 @@ export function Layout() {
               <Link
                 key={link.href}
                 to={link.href}
-                className={`nav-link whitespace-nowrap ${active ? 'nav-link-active' : ''}`}
+                className={`nav-link whitespace-nowrap ${active ? 'nav-lslate-active' : ''}`}
               >
-                <Icon size={14} className={active ? 'text-ink-900' : 'text-muted-400'} />
+                <Icon size={14} className={active ? 'text-slate-900' : 'text-slate-400'} />
                 {link.label}
               </Link>
             );
@@ -87,14 +87,14 @@ export function Layout() {
         <Outlet />
       </main>
 
-      <footer className="border-t border-muted-200 bg-white py-6 text-center text-sm text-muted-500">
+      <footer className="border-t border-slate-200 bg-white py-6 text-center text-sm text-slate-500">
         <p>
           Desenvolvido por{' '}
           <a
             href="https://www.linkedin.com/in/gustavo-vasconcelos-software-engineer/"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-ink-900 transition-colors hover:text-brand-600 hover:underline"
+            className="font-medium text-slate-900 transition-colors hover:text-brand-600 hover:underline"
           >
             Gustavo Vasconcelos
           </a>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { 
   Activity, ArrowLeft, CalendarClock, CreditCard, Banknote, Clock, MailWarning, 
-  CheckCircle2, XCircle, ArrowRight, Loader2, User, Mail, Globe, 
+  CheckCircle2, XCircle, Loader2, User, Mail, Globe, 
   RefreshCcw, AlertTriangle, AlertCircle 
 } from 'lucide-react';
 import { getFatura, updateFaturaStatus } from '../api';
@@ -113,10 +113,10 @@ export function FaturaDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[500px] flex-col items-center justify-center rounded-xl border border-muted-200 bg-white/50 border-dashed backdrop-blur-sm">
+      <div className="flex min-h-[500px] flex-col items-center justify-center rounded-xl border border-slate-200 bg-white/50 border-dashed backdrop-blur-sm">
         <Loader2 className="h-10 w-10 animate-spin text-brand-600 mb-4" />
-        <h3 className="text-lg font-semibold text-ink-900">Carregando detalhes...</h3>
-        <p className="text-sm text-muted-500 mt-1">Obtendo informações em tempo real</p>
+        <h3 className="text-lg font-semibold text-slate-900">Carregando detalhes...</h3>
+        <p className="text-sm text-slate-500 mt-1">Obtendo informações em tempo real</p>
       </div>
     );
   }
@@ -127,7 +127,7 @@ export function FaturaDetailPage() {
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 mb-4">
           <AlertCircle size={24} />
         </div>
-        <h1 className="text-xl font-semibold text-ink-900">Falha ao carregar</h1>
+        <h1 className="text-xl font-semibold text-slate-900">Falha ao carregar</h1>
         <p className="mt-2 text-sm text-red-600 max-w-sm text-center">{loadError}</p>
         <Link to="/" className="btn-secondary mt-6">
           <ArrowLeft size={16} />
@@ -152,13 +152,13 @@ export function FaturaDetailPage() {
   return (
     <div className="space-y-6 sm:space-y-8 animate-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-muted-500 hover:text-ink-900 transition-colors">
+        <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
           <ArrowLeft size={16} />
           Voltar ao painel
         </Link>
-        <div className="flex items-center gap-2 rounded-md bg-muted-100 px-2.5 py-1">
-          <span className="text-xs font-mono font-medium text-muted-500">ID</span>
-          <span className="text-xs font-mono text-ink-900 select-all">{fatura.id}</span>
+        <div className="flex items-center gap-2 rounded-md bg-slate-100 px-2.5 py-1">
+          <span className="text-xs font-mono font-medium text-slate-500">ID</span>
+          <span className="text-xs font-mono text-slate-900 select-all">{fatura.id}</span>
         </div>
       </div>
 
@@ -169,31 +169,31 @@ export function FaturaDetailPage() {
             <div className="flex items-start justify-between gap-4 mb-6">
               <div>
                 <p className="eyebrow flex items-center gap-1.5"><Banknote size={14} /> Detalhes da Cobrança</p>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink-900 mt-1">{fatura.descricao}</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mt-1">{fatura.descricao}</h1>
               </div>
               <StatusBadge status={fatura.status} />
             </div>
 
-            <div className="rounded-xl border border-muted-200 bg-muted-50/50 p-5 grid gap-5 sm:grid-cols-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-5 grid gap-5 sm:grid-cols-2">
               <div>
-                <p className="text-[13px] font-medium text-muted-500 mb-1 flex items-center gap-1.5"><User size={14} /> Devedor</p>
-                <p className="font-semibold text-ink-900">{fatura.nomeDevedor}</p>
+                <p className="text-[13px] font-medium text-slate-500 mb-1 flex items-center gap-1.5"><User size={14} /> Devedor</p>
+                <p className="font-semibold text-slate-900">{fatura.nomeDevedor}</p>
               </div>
               <div>
-                <p className="text-[13px] font-medium text-muted-500 mb-1 flex items-center gap-1.5"><Mail size={14} /> E-mail de Contato</p>
-                <p className="text-ink-900">{fatura.emailDevedor}</p>
+                <p className="text-[13px] font-medium text-slate-500 mb-1 flex items-center gap-1.5"><Mail size={14} /> E-mail de Contato</p>
+                <p className="text-slate-900">{fatura.emailDevedor}</p>
               </div>
             </div>
 
             {actionError && (
               <div className="mt-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+                <AlertTriangle size={18} className="shrslate-0 mt-0.5" />
                 <p>{actionError}</p>
               </div>
             )}
 
             {actions.length > 0 && (
-              <div className="mt-8 flex flex-wrap gap-3 pt-6 border-t border-muted-200">
+              <div className="mt-8 flex flex-wrap gap-3 pt-6 border-t border-slate-200">
                 {actions.includes('paga') && (
                   <button
                     type="button"
@@ -227,39 +227,39 @@ export function FaturaDetailPage() {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
                 <MailWarning size={18} />
               </div>
-              <h2 className="text-lg font-semibold text-ink-900">Régua de Lembretes</h2>
+              <h2 className="text-lg font-semibold text-slate-900">Régua de Lembretes</h2>
             </div>
             
             {fatura.lembretes.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-muted-200 bg-muted-50/50 p-8 text-center">
-                <p className="text-sm font-medium text-muted-500">Nenhum lembrete programado.</p>
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center">
+                <p className="text-sm font-medium text-slate-500">Nenhum lembrete programado.</p>
               </div>
             ) : (
-              <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-muted-200 before:to-transparent">
-                {fatura.lembretes.map((lembrete, i) => {
+              <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 before:to-transparent">
+                {fatura.lembretes.map((lembrete) => {
                   const style = lembreteStatusMap[lembrete.status];
                   const Icon = style.icon;
                   return (
                     <div key={lembrete.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-muted-100 text-muted-500 shadow-sm md:mx-auto shrink-0 z-10 transition-colors group-hover:bg-brand-100 group-hover:text-brand-700">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-slate-100 text-slate-500 shadow-sm md:mx-auto shrslate-0 z-10 transition-colors group-hover:bg-brand-100 group-hover:text-brand-700">
                         <Icon size={16} />
                       </div>
                       
-                      <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-muted-200 bg-white shadow-sm transition-all hover:border-brand-200 hover:shadow-md">
+                      <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:border-brand-200 hover:shadow-md">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="inline-flex items-center rounded-md bg-muted-100 px-2 py-1 font-mono text-[11px] font-semibold text-ink-900">
+                          <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 font-mono text-[11px] font-semibold text-slate-900">
                             {lembrete.tipo}
                           </span>
                           <span className={`inline-flex px-2 py-0.5 rounded-md text-[11px] font-semibold border ${style.className}`}>
                             {style.label}
                           </span>
                         </div>
-                        <p className="text-[13px] text-muted-500 mb-1">
-                          <span className="font-medium text-ink-900">Previsto:</span> {dateTimeFormatter.format(new Date(lembrete.dataEnvio))}
+                        <p className="text-[13px] text-slate-500 mb-1">
+                          <span className="font-medium text-slate-900">Previsto:</span> {dateTimeFormatter.format(new Date(lembrete.dataEnvio))}
                         </p>
                         
-                        <div className="flex items-center gap-3 text-[12px] text-muted-400 mt-3 pt-3 border-t border-muted-100">
-                          <span>Tentativas: <strong className="text-ink-900">{lembrete.tentativas}</strong></span>
+                        <div className="flex items-center gap-3 text-[12px] text-slate-400 mt-3 pt-3 border-t border-slate-100">
+                          <span>Tentativas: <strong className="text-slate-900">{lembrete.tentativas}</strong></span>
                           {lembrete.proximaTentativa && (
                             <span className="flex items-center gap-1">
                               <RefreshCcw size={10} />
@@ -286,21 +286,21 @@ export function FaturaDetailPage() {
         {/* Sidebar Column */}
         <div className="space-y-6">
           <aside className="surface-card overflow-hidden">
-            <div className="bg-ink-900 px-6 py-8 text-white relative">
+            <div className="bg-slate-900 px-6 py-8 text-white relative">
               <div className="absolute top-0 right-0 p-4 opacity-10">
                 <CreditCard size={80} />
               </div>
-              <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-400 mb-2 relative z-10">Resumo Financeiro</p>
+              <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-slate-400 mb-2 relative z-10">Resumo Financeiro</p>
               <p className="font-mono text-4xl font-semibold tracking-tight relative z-10">
                 {brl.format(fatura.valor)}
               </p>
             </div>
             
             <div className="p-6 space-y-5">
-              <div className="pb-5 border-b border-muted-100">
-                <p className="text-[13px] font-medium text-muted-500 mb-1 flex items-center gap-1.5"><CalendarClock size={14} /> Data de Vencimento</p>
+              <div className="pb-5 border-b border-slate-100">
+                <p className="text-[13px] font-medium text-slate-500 mb-1 flex items-center gap-1.5"><CalendarClock size={14} /> Data de Vencimento</p>
                 <div className="flex items-center justify-between">
-                  <p className="font-medium text-ink-900">{dateFormatter.format(new Date(fatura.dataVencimento))}</p>
+                  <p className="font-medium text-slate-900">{dateFormatter.format(new Date(fatura.dataVencimento))}</p>
                   {fatura.status === FaturaStatus.PENDENTE && (
                     <span className={`text-[11px] font-semibold px-2 py-1 rounded-md ${due.urgent ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
                       {due.text}
@@ -309,13 +309,13 @@ export function FaturaDetailPage() {
                 </div>
               </div>
               
-              <div className="pb-5 border-b border-muted-100">
-                <p className="text-[13px] font-medium text-muted-500 mb-1 flex items-center gap-1.5"><Globe size={14} /> Timezone / Local</p>
-                <p className="font-medium text-ink-900">{fatura.timezone}</p>
+              <div className="pb-5 border-b border-slate-100">
+                <p className="text-[13px] font-medium text-slate-500 mb-1 flex items-center gap-1.5"><Globe size={14} /> Timezone / Local</p>
+                <p className="font-medium text-slate-900">{fatura.timezone}</p>
               </div>
               
               <div>
-                <p className="text-[13px] font-medium text-muted-500 mb-2 flex items-center gap-1.5"><Activity size={14} /> Ciclo de Vida</p>
+                <p className="text-[13px] font-medium text-slate-500 mb-2 flex items-center gap-1.5"><Activity size={14} /> Ciclo de Vida</p>
                 <div className="flex flex-col gap-3">
                   {stateFlow.map((state, index) => {
                     const active = state === fatura.status;
@@ -327,13 +327,13 @@ export function FaturaDetailPage() {
                         <div className={`relative flex h-6 w-6 items-center justify-center rounded-full border-2 ${
                           active ? 'border-brand-600 bg-brand-50 text-brand-600' : 
                           isFailed ? 'border-red-500 bg-red-50 text-red-500' :
-                          passed ? 'border-emerald-500 bg-emerald-50 text-emerald-500' : 'border-muted-300 bg-muted-50 text-transparent'
+                          passed ? 'border-emerald-500 bg-emerald-50 text-emerald-500' : 'border-slate-300 bg-slate-50 text-transparent'
                         }`}>
                           {(passed || active) ? <CheckCircle2 size={12} className={isFailed ? 'hidden' : ''} /> : null}
                           {isFailed ? <XCircle size={12} /> : null}
                         </div>
                         <div>
-                          <p className={`text-sm font-semibold ${active ? 'text-ink-900' : 'text-muted-500'}`}> {statusLabelMap[state]} </p>
+                          <p className={`text-sm font-semibold ${active ? 'text-slate-900' : 'text-slate-500'}`}> {statusLabelMap[state]} </p>
                         </div>
                       </div>
                     )
@@ -344,15 +344,15 @@ export function FaturaDetailPage() {
           </aside>
 
           <aside className="surface-card p-6">
-            <h3 className="text-[13px] font-bold uppercase tracking-wider text-muted-500 mb-4">Metadados Internos</h3>
+            <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-500 mb-4">Metadados Internos</h3>
             <div className="space-y-4">
               <div>
-                <p className="text-[12px] text-muted-500">Registro Criado</p>
-                <p className="text-sm font-medium text-ink-900">{dateTimeFormatter.format(new Date(fatura.createdAt))}</p>
+                <p className="text-[12px] text-slate-500">Registro Criado</p>
+                <p className="text-sm font-medium text-slate-900">{dateTimeFormatter.format(new Date(fatura.createdAt))}</p>
               </div>
               <div>
-                <p className="text-[12px] text-muted-500">Última Atualização</p>
-                <p className="text-sm font-medium text-ink-900">{dateTimeFormatter.format(new Date(fatura.updatedAt))}</p>
+                <p className="text-[12px] text-slate-500">Última Atualização</p>
+                <p className="text-sm font-medium text-slate-900">{dateTimeFormatter.format(new Date(fatura.updatedAt))}</p>
               </div>
             </div>
           </aside>

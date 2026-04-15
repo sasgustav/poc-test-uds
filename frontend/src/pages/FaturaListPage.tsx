@@ -84,10 +84,10 @@ export function FaturaListPage() {
 
   if (loading && faturas.length === 0) {
     return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center rounded-xl border border-muted-200 bg-white/50 border-dashed backdrop-blur-sm">
+      <div className="flex min-h-[400px] flex-col items-center justify-center rounded-xl border border-slate-200 bg-white/50 border-dashed backdrop-blur-sm">
         <Loader2 className="h-10 w-10 animate-spin text-brand-600 mb-4" />
-        <h3 className="text-lg font-semibold text-ink-900">Carregando painel...</h3>
-        <p className="text-sm text-muted-500 mt-1">Sincronizando os registros mais recentes</p>
+        <h3 className="text-lg font-semibold text-slate-900">Carregando painel...</h3>
+        <p className="text-sm text-slate-500 mt-1">Sincronizando os registros mais recentes</p>
       </div>
     );
   }
@@ -98,7 +98,7 @@ export function FaturaListPage() {
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 mb-4">
           <AlertCircle size={24} />
         </div>
-        <h1 className="text-xl font-semibold text-ink-900">Falha ao carregar faturas</h1>
+        <h1 className="text-xl font-semibold text-slate-900">Falha ao carregar faturas</h1>
         <p className="mt-2 text-sm text-red-600 max-w-sm text-center">{error}</p>
         <button
           type="button"
@@ -136,24 +136,24 @@ export function FaturaListPage() {
         {metrics.map((metric) => (
           <article key={metric.title} className="metric-card group cursor-default">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-xs font-semibold text-muted-500">{metric.title}</p>
+              <p className="text-xs font-semibold text-slate-500">{metric.title}</p>
               <div className={`p-2 rounded-lg ${metric.bg} ${metric.color} transition-transform group-hover:scale-110`}>
                 <metric.icon size={18} />
               </div>
             </div>
-            <p className="text-2xl font-bold tracking-tight text-ink-900">{metric.value}</p>
-            <p className="mt-1 text-[13px] text-muted-500">{metric.detail}</p>
+            <p className="text-2xl font-bold tracking-tight text-slate-900">{metric.value}</p>
+            <p className="mt-1 text-[13px] text-slate-500">{metric.detail}</p>
           </article>
         ))}
       </section>
 
       {faturas.length === 0 ? (
-        <section className="flex min-h-[300px] flex-col items-center justify-center rounded-xl border border-muted-200 border-dashed bg-white text-center p-8">
+        <section className="flex min-h-[300px] flex-col items-center justify-center rounded-xl border border-slate-200 border-dashed bg-white text-center p-8">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-50 text-brand-600 mb-5">
             <FileText size={32} />
           </div>
-          <h2 className="text-lg font-semibold text-ink-900">Nenhuma fatura encontrada</h2>
-          <p className="mt-2 text-sm text-muted-500 max-w-md">
+          <h2 className="text-lg font-semibold text-slate-900">Nenhuma fatura encontrada</h2>
+          <p className="mt-2 text-sm text-slate-500 max-w-md">
             Você ainda não possui cobranças cadastradas. Crie a primeira fatura para dar início ao seu fluxo financeiro.
           </p>
           <Link to="/faturas/new" className="btn-secondary mt-6">
@@ -164,8 +164,8 @@ export function FaturaListPage() {
       ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-ink-900">Registros recentes</h2>
-            {loading && <Loader2 size={16} className="animate-spin text-muted-400" />}
+            <h2 className="text-sm font-semibold text-slate-900">Registros recentes</h2>
+            {loading && <Loader2 size={16} className="animate-spin text-slate-400" />}
           </div>
           
           <div className="table-shell hidden md:block">
@@ -184,15 +184,15 @@ export function FaturaListPage() {
                   <tr key={fatura.id} className="group">
                     <td>
                       <div className="flex flex-col">
-                        <span className="font-medium text-ink-900">{fatura.nomeDevedor}</span>
-                        <span className="mt-1 text-[13px] text-muted-500 truncate max-w-[250px]">{fatura.descricao}</span>
+                        <span className="font-medium text-slate-900">{fatura.nomeDevedor}</span>
+                        <span className="mt-1 text-[13px] text-slate-500 truncate max-w-[250px]">{fatura.descricao}</span>
                       </div>
                     </td>
                     <td>
-                      <span className="font-mono font-medium text-ink-900">{brl.format(fatura.valor)}</span>
+                      <span className="font-mono font-medium text-slate-900">{brl.format(fatura.valor)}</span>
                     </td>
                     <td>
-                      <span className="text-sm text-ink-700">{dateFormatter.format(new Date(fatura.dataVencimento))}</span>
+                      <span className="text-sm text-slate-700">{dateFormatter.format(new Date(fatura.dataVencimento))}</span>
                     </td>
                     <td>
                       <StatusBadge status={fatura.status} />
@@ -218,19 +218,19 @@ export function FaturaListPage() {
               <Link key={fatura.id} to={`/faturas/${fatura.id}`} className="surface-card p-4 hover:border-brand-300 transition-colors block">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
-                    <p className="font-medium text-ink-900">{fatura.nomeDevedor}</p>
-                    <p className="text-xs text-muted-500 line-clamp-1">{fatura.descricao}</p>
+                    <p className="font-medium text-slate-900">{fatura.nomeDevedor}</p>
+                    <p className="text-xs text-slate-500 line-clamp-1">{fatura.descricao}</p>
                   </div>
                   <StatusBadge status={fatura.status} />
                 </div>
-                <div className="flex items-center justify-between border-t border-muted-100 pt-3">
+                <div className="flex items-center justify-between border-t border-slate-100 pt-3">
                   <div>
-                    <p className="text-xs font-medium text-muted-500 mb-0.5">Valor</p>
-                    <p className="font-mono text-sm font-semibold text-ink-900">{brl.format(fatura.valor)}</p>
+                    <p className="text-xs font-medium text-slate-500 mb-0.5">Valor</p>
+                    <p className="font-mono text-sm font-semibold text-slate-900">{brl.format(fatura.valor)}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-medium text-muted-500 mb-0.5">Vencimento</p>
-                    <p className="text-sm text-ink-900">{dateFormatter.format(new Date(fatura.dataVencimento))}</p>
+                    <p className="text-xs font-medium text-slate-500 mb-0.5">Vencimento</p>
+                    <p className="text-sm text-slate-900">{dateFormatter.format(new Date(fatura.dataVencimento))}</p>
                   </div>
                 </div>
               </Link>
@@ -239,10 +239,10 @@ export function FaturaListPage() {
 
           {/* Pagination */}
           {pagination && pagination.totalPages > 1 && (
-            <div className="flex flex-col items-center justify-between gap-4 border-t border-muted-200 mt-6 pt-6 sm:flex-row">
-              <p className="text-sm text-muted-500">
-                Mostrando página <span className="font-medium text-ink-900">{pagination.page}</span> de{' '}
-                <span className="font-medium text-ink-900">{pagination.totalPages}</span>
+            <div className="flex flex-col items-center justify-between gap-4 border-t border-slate-200 mt-6 pt-6 sm:flex-row">
+              <p className="text-sm text-slate-500">
+                Mostrando página <span className="font-medium text-slate-900">{pagination.page}</span> de{' '}
+                <span className="font-medium text-slate-900">{pagination.totalPages}</span>
               </p>
               <div className="flex items-center gap-2">
                 <button
