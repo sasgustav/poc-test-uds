@@ -72,8 +72,8 @@ export function FaturaDetailPage() {
       .then((data) => {
         if (!cancelled) setFatura(data);
       })
-      .catch((err: { response?: { data?: { message?: string } } }) => {
-        if (!cancelled) setLoadError(err.response?.data?.message ?? 'Nao foi possivel carregar a fatura.');
+      .catch((err: { response?: { data?: { detail?: string } } }) => {
+        if (!cancelled) setLoadError(err.response?.data?.detail ?? 'Nao foi possivel carregar a fatura.');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -93,10 +93,10 @@ export function FaturaDetailPage() {
       const updated = await updateFaturaStatus(id, status);
       setFatura(updated);
     } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } }).response?.data?.message ??
+      const detail =
+        (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ??
         'Nao foi possivel atualizar o status.';
-      setActionError(message);
+      setActionError(detail);
     } finally {
       setActionLoading(false);
     }

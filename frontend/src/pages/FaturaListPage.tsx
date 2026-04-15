@@ -24,9 +24,9 @@ export function FaturaListPage() {
         setFaturas(res.data);
         setPagination(res.pagination);
       })
-      .catch((err: { response?: { data?: { message?: string } } }) => {
+      .catch((err: { response?: { data?: { detail?: string } } }) => {
         if (cancelled) return;
-        setError(err.response?.data?.message ?? 'Nao foi possivel carregar as faturas.');
+        setError(err.response?.data?.detail ?? 'Nao foi possivel carregar as faturas.');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

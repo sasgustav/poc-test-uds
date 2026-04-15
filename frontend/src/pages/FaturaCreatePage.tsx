@@ -25,8 +25,8 @@ export function FaturaCreatePage() {
       navigate(`/faturas/${fatura.id}`);
     } catch (err: unknown) {
       const msg =
-        (err as { response?: { data?: { message?: string | string[] } } }).response?.data
-          ?.message ?? 'Erro ao criar fatura.';
+        (err as { response?: { data?: { detail?: string | string[] } } }).response?.data
+          ?.detail ?? 'Erro ao criar fatura.';
       setError(Array.isArray(msg) ? msg.join(', ') : msg);
     } finally {
       setSubmitting(false);
