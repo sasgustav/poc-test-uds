@@ -1,4 +1,4 @@
-# Avaliação Técnica — Desenvolvedor Fullstack (Talent Studio)
+# Avaliação Técnica
 
 Repositório com a solução da avaliação técnica. A entrega foi reelevada
 para padrão **sênior especialista**: arquitetura hexagonal, outbox pattern,
